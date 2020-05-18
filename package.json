@@ -1,0 +1,27 @@
+{
+  "name": "net-ipc",
+  "version": "1.0.0",
+  "description": "Simple IPC client-server with no dependencies. Provides bi-directional one-to-one and one-to-many communication over sockets and TCP. Supports one-way messages, promise-based request-response, survey, broadcast and zlib compression",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/timotejroiko/net-ipc.git"
+  },
+  "keywords": [
+    "ipc",
+    "net",
+    "tcp",
+    "socket",
+    "client",
+    "server",
+    "promise",
+    "survey",
+    "broadcast",
+    "zlib"
+  ],
+  "author": "Timotej Valentin Rojko",
+  "license": "MIT",
+}
