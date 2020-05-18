@@ -3,7 +3,7 @@ const fs = require("fs");
 const emitter = require("events");
 const zlib = require('zlib');
 
-class Server extends emitter {
+module.exports = class Server extends emitter {
 	constructor(options = {}) {
 		super();
 		this.clients = [];
@@ -111,7 +111,7 @@ class Connection {
 		let d;
 		try {
 			d = JSON.stringify(data,this._replacer());
-			if(this.server.options.compress) {
+			if(this.connection._compress) {
 				d = zlib.deflateSync(d);
 			}
 		} catch(e) {
@@ -147,9 +147,10 @@ class Connection {
 		}
 	}
 	_ondata(data) {
+		console.log(data)
 		let d = data;
 		try {
-			if(this._compress) {
+			if(this.connection._compress) {
 				d = zlib.inflateSync(d);
 			}
 			d = JSON.parse(d);
@@ -157,6 +158,7 @@ class Connection {
 			this.connection.emit("error", e);
 			return;
 		}
+		console.log(d)
 		let keys = Object.keys(d);
 		if(d._nonce) {
 			if(keys.includes("_response") && this._requests[d._nonce]) {
@@ -166,7 +168,7 @@ class Connection {
 				if(this.server._events.request) {
 					this.server.emit("request", d._request, this.id, this._reply.bind(this, d._nonce));
 				} else {
-					this._reply(d._nonce,undefined);
+					this._reply(d._nonce, null);
 				}
 			}
 		} else {
@@ -174,6 +176,7 @@ class Connection {
 		}
 	}
 	_reply(nonce,data) {
+		if(data === undefined) { data = null; }
 		this.send({_nonce:nonce,_response:data});
 	}
 	_replacer() {
@@ -189,5 +192,3 @@ class Connection {
 		}
 	}
 }
-
-module.exports = Server;
