@@ -83,7 +83,6 @@ module.exports = class Client extends emitter {
 		this.emit("close");
 	}
 	_ondata(data) {
-		console.log(data)
 		let d = data;
 		try {
 			if(this.connection._compress) {
@@ -94,7 +93,6 @@ module.exports = class Client extends emitter {
 			this.connection.emit("error", e);
 			return;
 		}
-		console.log(d)
 		let keys = Object.keys(d);
 		if(d._nonce) {
 			if(keys.includes("_response") && this._requests[d._nonce]) {
