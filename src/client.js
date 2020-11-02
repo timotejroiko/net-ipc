@@ -1,132 +1,122 @@
-const net = require("net");
-const fs = require("fs");
-const emitter = require("events");
-const zlib = require('zlib');
+const { Socket } = require("net");
+const Emitter = require("events");
+const interfaces = require("./interfaces.js");
+const constants = require("./constants.js");
 
-module.exports = class Client extends emitter {
+class Client extends Emitter {
 	constructor(options = {}) {
 		super();
 		this.options = options;
+		if(!this.options.url && !this.options.path) { this.options.path = constants.Options.DEFAULT_PATH; }
+		if(this.options.url && typeof this.options.url !== "string") { throw constants.ErrorMessages.BAD_URL; }
+		if(this.options.path && typeof this.options.path !== "string") { throw constants.ErrorMessages.BAD_PATH; }
+		if(this.options.path && process.platform === "win32") { this.options.path = `\\\\.\\pipe\\${this.options.path.replace(/^\//, "").replace(/\//g, "-")}`; }
+		if(this.options.compress) { this.options.compress = Boolean(this.options.compress); }
 		this.connection = null;
 		this._requests = {};
-		if(!this.options.url && !this.options.path) { this.options.path = "net-ipc"; }
-		if(this.options.url && typeof this.options.url !== "string") { throw "Invalid url"; }
-		if(this.options.path && typeof this.options.path !== "string") { throw "Invalid path"; }
-		if(this.options.path && process.platform === "win32") { this.options.path = `\\\\.\\pipe\\${this.options.path.replace(/^\//, "").replace(/\//g, "-")}`; }
-		if(!Number.isInteger(this.options.timeout)) { this.options.timeout = 30000; }
+		this._buffer = "";
+		this.pings = [];
 	}
-	connect() {
-		if(this.connection) {
-			this.connection.end();
-			setTimeout(this.connect.bind(this),1000);
-			return;
-		}
-		this.connection = new net.Socket();
-		this.connection.setKeepAlive(true);
-		this.connection.on('ready', this._onready.bind(this));
-		this.connection.on('error', this._onerror.bind(this));
-		this.connection.on('close', this._onclose.bind(this));
-		this.connection.on('data', this._ondata.bind(this));
-		if(this.options.path) {
-			this.connection.connect({path:this.options.path});
-		} else if(this.options.url) {
-			let url = this.options.url.split(":")
-			this.connection.connect({host:url[0],port:url[1]});
-		}
-		return new Promise((ok,nope) => {
-			this.once("ready",ok());
-			setTimeout(() => nope("no response"), 5000);
-		});
-	}
-	disconnect() {
-		this.connection.end();
-	}
-	send(data) {
-		let d;
-		try {
-			d = JSON.stringify(data,this._replacer());
-			if(this.connection._compress) {
-				d = zlib.deflateSync(d);
+	connect(data) {
+		return new Promise((ok, nope) => {
+			if(this.connection) {
+				this.connection.end();
+				setTimeout(() => ok(this.connect(data)), 500);
+				return;
 			}
-		} catch(e) {
-			this.connection.emit("error", e);
-			return;
-		}
-		this.connection.write(d);
-	}
-	request(data) {
-		return new Promise((ok,nope) => {
-			let nonce = Math.floor(Math.random()*999999999999).toString(36) + Date.now().toString(36);
-			this._requests[nonce] = [ok,nope];
-			this.send({_nonce:nonce,_request:data});
-			setTimeout(() => {
-				if(this._requests[nonce]) {
-					this._requests[nonce][1]("request timeout");
-					delete this._requests[nonce];
-				}
-			}, this.options.timeout)
+			this.connection = new Socket();
+			this.connection.setKeepAlive(true);
+			this.connection.on(constants.ConnectionEvents.READABLE, this._read.bind(this, this.connection));
+			this.connection.on(constants.ConnectionEvents.DRAIN, this._drain.bind(this));
+			this.connection.on(constants.ConnectionEvents.CLOSE, e => {
+				nope(e || constants.ErrorMessages.NO_RESPONSE);
+			});
+			this.connection.on(constants.ConnectionEvents.ERROR, e => {
+				this.connection.end();
+				nope(e || constants.ErrorMessages.UNKNOWN_ERROR);
+			});
+			this.connection.once(constants.ConnectionEvents.READY, () => {
+				this._write(constants.MessageTypes.CONNECTION, { compress: this.options.compress && Boolean(this._zlib) }).catch(e => this.connection.emit(constants.ConnectionEvents.error, e));
+				this.connection.cork();
+			});
+			this.connection.once(constants.ConnectionEvents.DONE, extras => {
+				this.connection._events[constants.ConnectionEvents.CLOSE] = this._onclose.bind(this);
+				this.connection._events[constants.ConnectionEvents.ERROR] = this._onerror.bind(this);
+				this.connection.uncork();
+				this.emit(constants.Events.READY, extras);
+				ok(this);
+			});
+			if(this.options.path) {
+				this.connection.connect({path:this.options.path});
+			} else if(this.options.url) {
+				let url = this.options.url.split(":");
+				let port = url.pop();
+				this.connection.connect({host:url.join(":"),port:port});
+			}
 		});
-	}
-	_onready() {
-		
 	}
 	_onerror(e) {
-		if(this._events.error) {
-			this.emit("error",e)
-		} else {
-			throw e;
+		if(this._events[constants.Events.ERROR]) {
+			this.emit(constants.Events.ERROR, e);
 		}
 	}
 	_onclose() {
+		this.connection.destroy();
 		this.connection.removeAllListeners();
 		this.connection = null;
-		this.emit("close");
+		this.emit(constants.Events.CLOSE);
 	}
-	_ondata(data) {
-		let d = data;
+	_parse(data) {
 		try {
-			if(this.connection._compress) {
-				d = zlib.inflateSync(d);
-			}
-			d = JSON.parse(d);
+			data = JSON.parse(data);
 		} catch(e) {
-			this.connection.emit("error", e);
+			this.connection.emit(constants.ConnectionEvents.ERROR, e);
 			return;
 		}
-		let keys = Object.keys(d);
-		if(d._nonce) {
-			if(keys.includes("_response") && this._requests[d._nonce]) {
-				this._requests[d._nonce][0](d._response);
-				delete this._requests[d._nonce];
-			} else if(keys.includes("_request")) {
-				if(d._request._hello && d._request._hello === "hello") {
-					this._reply(d._nonce, {_hello:"hello",_compress:this.options.compress});
-					if(this.options.compress) { this.connection._compress = true; }
-					this.emit("ready",this.connection.remoteAddress);
-				} else if(this._events.request) {
-					this.emit("request", d._request, this.id, this._reply.bind(this, d._nonce));
+		switch(data.t) {
+			case constants.MessageTypes.CONNECTION:
+				if(data.d.compress) {
+					this.connection.zlib = {
+						pack: this._zlib(constants.ZlibDeflator),
+						unpack: this._zlib(constants.ZlibInflator)
+					}
+				} else if(this.options.compress) {
+					this.options.compress = false;
+					console.warn(constants.ErrorMessages.ZLIB_MISSING);
+				}
+				this.connection.emit(constants.ConnectionEvents.DONE, data.d.extras);
+				break;
+			case constants.MessageTypes.MESSAGE:
+				this.emit(constants.Events.MESSAGE, data.d);
+				break;
+			case constants.MessageTypes.REQUEST:
+				if(this._events[constants.Events.REQUEST]) {
+					this.emit(constants.Events.REQUEST, data.d, response => this._write(constants.MessageTypes.RESPONSE, response, data.n));
 				} else {
-					this._reply(d._nonce, null);
+					this._write(constants.MessageTypes.RESPONSE, void 0, data.n).catch(e => this.connection.emit(constants.ConnectionEvents.error, e));
 				}
-			}
-		} else {
-			this.emit("message", d, this.id);
-		}
-	}
-	_reply(nonce,data) {
-		if(data === undefined) { data = null; }
-		this.send({_nonce:nonce,_response:data});
-	}
-	_replacer() {
-		let seen = new WeakSet();
-		return (key, value) => {
-			if(typeof value === "object" && value !== null) {
-				if (seen.has(value)) {
-					return;
+				break;
+			case constants.MessageTypes.RESPONSE:
+				if(this._requests[data.n]) {
+					this._requests[data.n][0](data.d);
+					delete this._requests[data.n];
 				}
-				seen.add(value);
-			}
-			return value;
+				break;
+			case constants.MessageTypes.PING:
+				this._write(constants.MessageTypes.PONG, data.d, data.n).catch(e => this.connection.emit(constants.ConnectionEvents.error, e));
+				break;
+			case constants.MessageTypes.PONG:
+				if(this._requests[data.n]) {
+					this._requests[data.n][0](Date.now() - this._requests[data.n][2]);
+					delete this._requests[data.n];
+				}
+				break;
 		}
 	}
 }
+
+for(let [method, value] of Object.entries(interfaces)) {
+	Client.prototype[method] = value;
+}
+
+module.exports = Client;
