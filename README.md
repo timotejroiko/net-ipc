@@ -119,7 +119,7 @@ client.connect("hi").catch(console.error);
 ### Server Methods
 
 * **`start() -> promise<Server>`** - Starts the server.
-* **`close() -> Server`** - Disconnects all clients and closes the server.
+* **`close() -> promise<Server>`** - Disconnects all clients and closes the server.
 * **`broadcast(data:any) -> promise<void>`** - Sends a message to all clients. Errors will be forwarded to the error event and wont reject the promise.
 * **`survey(data:any, timeout:integer) -> promise<object[]>`** - Sends a request to all clients. Returns an array of objects containing promise statuses and results.
 * **`ping(data:any) -> promise<object[]>`** - Sends a ping request to all clients. Returns an array of objects containing the promise statuses and results.

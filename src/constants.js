@@ -24,7 +24,8 @@ module.exports = {
 		ORPHAN_CONNECTION:"closing orphaned connection",
 		NO_RESPONSE:"no response",
 		UNKNOWN_ERROR:"unknown error",
-		ZLIB_MISSING:"WARNING: compression requires the 'fast-zlib' package to be installed (npm install fast-zlib)"
+		ZLIB_MISSING:"WARNING: compression requires the 'fast-zlib' package to be installed (npm install fast-zlib)",
+		SERVER_CLOSED:"Server was shut down"
 	},
 	Events:{
 		READY:"ready",

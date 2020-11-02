@@ -43,11 +43,11 @@ module.exports = class Server extends Emitter {
 			}
 		});
 	}
-	close() {
+	async close() {
 		if(this.server) {
 			this.server.close();
 			for(let client of this.connections) {
-				client.close();
+				await client.close(constants.ErrorMessages.SERVER_CLOSED);
 			}
 		}
 		return this;
