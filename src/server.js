@@ -27,7 +27,7 @@ module.exports = class Server extends Emitter {
 			this.server.on(constants.ServerEvents.CLOSE, this._onclose.bind(this));
 			this.server.on(constants.ServerEvents.CONNECTION, this._onconnection.bind(this));
 			this.server.on(constants.ServerEvents.LISTENING, this._onlistening.bind(this));
-			this.server.once(constants.ServerEvents.LISTENING, ok);
+			this.server.once(constants.ServerEvents.LISTENING, () => ok(this));
 			if(this.options.max) { this.server.maxConnections = max; }
 			if(this.options.path) {
 				try { unlinkSync(this.options.path); } catch(e) {}
@@ -52,9 +52,9 @@ module.exports = class Server extends Emitter {
 		}
 		return this;
 	}
-	broadcast(data) {
+	async broadcast(data) {
 		for(let c of this.connections) {
-			c.send(data);
+			await c.send(data).catch(e => this.emit(constants.Events.ERROR, e));
 		}
 	}
 	survey(data, timeout = 10000) {
@@ -81,7 +81,7 @@ module.exports = class Server extends Emitter {
 	}
 	_onconnection(socket) {
 		let client = new Connection(socket, this);
-		client.connection.once("ready", extras => {
+		client.connection.once(constants.ConnectionEvents.READY, extras => {
 			if(!this.connections.find(t => t.id === client.id)) {
 				this.connections.push(client);
 				this.emit(constants.Events.CONNECT, client, extras);

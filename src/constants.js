@@ -8,7 +8,8 @@ module.exports = {
 		REQUEST:2,
 		RESPONSE:3,
 		PING:4,
-		PONG:5
+		PONG:5,
+		END:6
 	},
 	ErrorMessages:{
 		BAD_TIMEOUT:"invalid timeout",
@@ -31,7 +32,8 @@ module.exports = {
 		CONNECT:"connect",
 		DISCONNECT:"disconnect",
 		MESSAGE:"message",
-		REQUEST:"request"
+		REQUEST:"request",
+		CLOSE:"close"
 	},
 	ConnectionEvents:{
 		ERROR:"error",

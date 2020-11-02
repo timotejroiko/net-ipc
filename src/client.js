@@ -6,16 +6,13 @@ const constants = require("./constants.js");
 class Client extends Emitter {
 	constructor(options = {}) {
 		super();
+		this.connection = null;
 		this.options = options;
 		if(!this.options.url && !this.options.path) { this.options.path = constants.Options.DEFAULT_PATH; }
 		if(this.options.url && typeof this.options.url !== "string") { throw constants.ErrorMessages.BAD_URL; }
 		if(this.options.path && typeof this.options.path !== "string") { throw constants.ErrorMessages.BAD_PATH; }
 		if(this.options.path && process.platform === "win32") { this.options.path = `\\\\.\\pipe\\${this.options.path.replace(/^\//, "").replace(/\//g, "-")}`; }
 		if(this.options.compress) { this.options.compress = Boolean(this.options.compress); }
-		this.connection = null;
-		this._requests = {};
-		this._buffer = "";
-		this.pings = [];
 	}
 	connect(data) {
 		return new Promise((ok, nope) => {
@@ -36,13 +33,18 @@ class Client extends Emitter {
 				nope(e || constants.ErrorMessages.UNKNOWN_ERROR);
 			});
 			this.connection.once(constants.ConnectionEvents.READY, () => {
-				this._write(constants.MessageTypes.CONNECTION, { compress: this.options.compress && Boolean(this._zlib) }).catch(e => this.connection.emit(constants.ConnectionEvents.error, e));
+				this._write(constants.MessageTypes.CONNECTION, { compress: this.options.compress && Boolean(this._zlib) }).catch(e => this.connection.emit(constants.ConnectionEvents.ERROR, e));
 				this.connection.cork();
 			});
 			this.connection.once(constants.ConnectionEvents.DONE, extras => {
 				this.connection._events[constants.ConnectionEvents.CLOSE] = this._onclose.bind(this);
 				this.connection._events[constants.ConnectionEvents.ERROR] = this._onerror.bind(this);
 				this.connection.uncork();
+				this.id = extras.id;
+				if(this.options.compress && !extras.compress) {
+					this.options.compress = false;
+					console.warn(constants.ErrorMessages.ZLIB_MISSING);
+				}
 				this.emit(constants.Events.READY, extras);
 				ok(this);
 			});
@@ -60,11 +62,11 @@ class Client extends Emitter {
 			this.emit(constants.Events.ERROR, e);
 		}
 	}
-	_onclose() {
+	_onclose(e) {
 		this.connection.destroy();
 		this.connection.removeAllListeners();
 		this.connection = null;
-		this.emit(constants.Events.CLOSE);
+		this.emit(constants.Events.CLOSE, e || this._end);
 	}
 	_parse(data) {
 		try {
@@ -80,11 +82,8 @@ class Client extends Emitter {
 						pack: this._zlib(constants.ZlibDeflator),
 						unpack: this._zlib(constants.ZlibInflator)
 					}
-				} else if(this.options.compress) {
-					this.options.compress = false;
-					console.warn(constants.ErrorMessages.ZLIB_MISSING);
 				}
-				this.connection.emit(constants.ConnectionEvents.DONE, data.d.extras);
+				this.connection.emit(constants.ConnectionEvents.DONE, data.d);
 				break;
 			case constants.MessageTypes.MESSAGE:
 				this.emit(constants.Events.MESSAGE, data.d);
@@ -93,7 +92,7 @@ class Client extends Emitter {
 				if(this._events[constants.Events.REQUEST]) {
 					this.emit(constants.Events.REQUEST, data.d, response => this._write(constants.MessageTypes.RESPONSE, response, data.n));
 				} else {
-					this._write(constants.MessageTypes.RESPONSE, void 0, data.n).catch(e => this.connection.emit(constants.ConnectionEvents.error, e));
+					this._write(constants.MessageTypes.RESPONSE, void 0, data.n).catch(e => this.connection.emit(constants.ConnectionEvents.ERROR, e));
 				}
 				break;
 			case constants.MessageTypes.RESPONSE:
@@ -103,12 +102,17 @@ class Client extends Emitter {
 				}
 				break;
 			case constants.MessageTypes.PING:
-				this._write(constants.MessageTypes.PONG, data.d, data.n).catch(e => this.connection.emit(constants.ConnectionEvents.error, e));
+				this._write(constants.MessageTypes.PONG, data.d, data.n).catch(e => this.connection.emit(constants.ConnectionEvents.ERROR, e));
 				break;
 			case constants.MessageTypes.PONG:
 				if(this._requests[data.n]) {
 					this._requests[data.n][0](Date.now() - this._requests[data.n][2]);
 					delete this._requests[data.n];
+				}
+				break;
+			case constants.MessageTypes.END:
+				if(data.d) {
+					this._end = data.d;
 				}
 				break;
 		}

@@ -45,7 +45,7 @@ module.exports = {
 	close(data) {
 		this.connection.closing = true;
 		return Promise.allSettled(this._drainQueue).then(() => {
-			this.connection.end(data);
+			this.connection.end({ t:constants.MessageTypes.END, d:data });
 			return true;
 		});
 	},
@@ -110,6 +110,8 @@ module.exports = {
 	_drain() {
 		this._drainQueue.shift().resolve(true);
 	},
-	_drainQueue:[],
+	_drainQueue: [],
+	_requests: {},
+	_buffer: "",
 	_zlib
 }

@@ -77,7 +77,7 @@ async function requestTest(client,test) {
 		times.push(Date.now() - time);
 		results.push(result);
 	}
-	console.log(`[CLIENT] finished in ${Date.now() - total}ms, average response time of ${times.reduce((a,b) => a + b, 0) / times.length}`);
+	console.log(`[CLIENT] finished in ${Date.now() - total}ms, average response time of ${times.reduce((a,b) => a + b, 0) / times.length}ms`);
 	console.log(`[CLIENT] verifying data integrity`);
 	for(let i = 0; i < data.length; i++) {
 		if(data[i] !== results[i]) { throw new Error("invalid data received"); }
