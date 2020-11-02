@@ -118,11 +118,11 @@ client.connect("hi").catch(console.error);
 
 ### Server Methods
 
-* **`start() -> promise<Server>`** - Starts the server.
-* **`close() -> promise<Server>`** - Disconnects all clients and closes the server.
-* **`broadcast(data:any) -> promise<void>`** - Sends a message to all clients. Errors will be forwarded to the error event and wont reject the promise.
-* **`survey(data:any, timeout:integer) -> promise<object[]>`** - Sends a request to all clients. Returns an array of objects containing promise statuses and results.
-* **`ping(data:any) -> promise<object[]>`** - Sends a ping request to all clients. Returns an array of objects containing the promise statuses and results.
+* **`.start() -> promise<Server>`** - Starts the server.
+* **`.close() -> promise<Server>`** - Disconnects all clients and closes the server.
+* **`.broadcast(data:any) -> promise<void>`** - Sends a message to all clients. Errors will be forwarded to the error event and wont reject the promise.
+* **`.survey(data:any, timeout:integer) -> promise<object[]>`** - Sends a request to all clients. Returns an array of objects containing promise statuses and results.
+* **`.ping(data:any) -> promise<object[]>`** - Sends a ping request to all clients. Returns an array of objects containing the promise statuses and results.
 
 ### Server Properties
 
@@ -140,12 +140,12 @@ client.connect("hi").catch(console.error);
 
 ### Client Methods
 
-* **`connect(payload:any) -> promise<Client>`** - connects to the server and optionally sends an initial payload.
-* **`send(data:any) -> promise<bool>`** - Sends a message to the server.
-* **`request(data:any, timeout:integer) -> promise<any>`** - Sends a request to the server and waits for a response.
-* **`ping(data:any) -> promise<integer>`** - Sends a ping request to the server.
-* **`close(reason:any) -> promise<bool>`** - Finishes all pending jobs then closes the connection.
-* **`destroy(reason:any) -> bool`** - Rejects all pending jobs and closes the connection.
+* **`.connect(payload:any) -> promise<Client>`** - connects to the server and optionally sends an initial payload.
+* **`.send(data:any) -> promise<bool>`** - Sends a message to the server.
+* **`.request(data:any, timeout:integer) -> promise<any>`** - Sends a request to the server and waits for a response.
+* **`.ping(data:any) -> promise<integer>`** - Sends a ping request to the server.
+* **`.close(reason:any) -> promise<bool>`** - Finishes all pending jobs then closes the connection.
+* **`.destroy(reason:any) -> bool`** - Rejects all pending jobs and closes the connection.
 
 ### Client Properties
 
