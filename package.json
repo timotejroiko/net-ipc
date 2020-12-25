@@ -10,7 +10,7 @@
     "url": "https://github.com/timotejroiko/net-ipc.git"
   },
   "peerDependencies": {
-    "fast-zlib":"^1.0.3"
+    "fast-zlib": "^2.0.0"
   },
   "keywords": [
     "ipc",
@@ -25,5 +25,12 @@
     "zlib"
   ],
   "author": "Timotej Valentin Rojko",
-  "license": "MIT"
+  "funding": {
+    "type": "patreon",
+    "url": "https://patreon.com/timotejroiko"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "eslint": "^7.16.0"
+  }
 }

@@ -1,3 +1,5 @@
+"use strict";
+
 const { fork } = require("child_process");
 
 fork(`${__dirname}/server.js`);

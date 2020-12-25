@@ -1,4 +1,6 @@
-const { Server:NetServer } = require("net");
+"use strict";
+
+const { Server: NetServer } = require("net");
 const { unlinkSync, statSync } = require("fs");
 const Emitter = require("events");
 const Connection = require("./connection.js");
@@ -28,32 +30,35 @@ module.exports = class Server extends Emitter {
 			this.server.on(constants.ServerEvents.CONNECTION, this._onconnection.bind(this));
 			this.server.on(constants.ServerEvents.LISTENING, this._onlistening.bind(this));
 			this.server.once(constants.ServerEvents.LISTENING, () => ok(this));
-			if(this.options.max) { this.server.maxConnections = max; }
+			if(this.options.max) { this.server.maxConnections = this.options.max; }
 			if(this.options.path) {
-				try { unlinkSync(this.options.path); } catch(e) {}
+				try { unlinkSync(this.options.path); } catch(e) { /* no-op */ }
 				try {
-					statSync(this.options.path);					
+					statSync(this.options.path);
 					this.close();
 					nope(new Error(`${constants.ErrorMessages.EADDRINUSE} - ${this.options.path}`));
 					return;
-				} catch(e) {}
-				this.server.listen({path:this.options.path});
+				} catch(e) { /* no-op */ }
+				this.server.listen({ path: this.options.path });
 			} else if(this.options.port) {
-				this.server.listen({port:this.options.port, exclusive:true});
+				this.server.listen({
+					port: this.options.port,
+					exclusive: true
+				});
 			}
 		});
 	}
 	async close() {
 		if(this.server) {
 			this.server.close();
-			for(let client of this.connections) {
+			for(const client of this.connections) {
 				await client.close(constants.ErrorMessages.SERVER_CLOSED);
 			}
 		}
 		return this;
 	}
 	async broadcast(data) {
-		for(let c of this.connections) {
+		for(const c of this.connections) {
 			await c.send(data).catch(e => this.emit(constants.Events.ERROR, e));
 		}
 	}
@@ -80,7 +85,7 @@ module.exports = class Server extends Emitter {
 		this.emit(constants.Events.CLOSE);
 	}
 	_onconnection(socket) {
-		let client = new Connection(socket, this);
+		const client = new Connection(socket, this);
 		client.connection.once(constants.ConnectionEvents.READY, extras => {
 			if(!this.connections.find(t => t.id === client.id)) {
 				this.connections.push(client);
@@ -94,4 +99,4 @@ module.exports = class Server extends Emitter {
 			}
 		}, 10000);
 	}
-}
+};

@@ -1,3 +1,5 @@
+"use strict";
+
 const { Socket } = require("net");
 const Emitter = require("events");
 const interfaces = require("./interfaces.js");
@@ -49,11 +51,14 @@ class Client extends Emitter {
 				ok(this);
 			});
 			if(this.options.path) {
-				this.connection.connect({path:this.options.path});
+				this.connection.connect({ path: this.options.path });
 			} else if(this.options.url) {
-				let url = this.options.url.split(":");
-				let port = url.pop();
-				this.connection.connect({host:url.join(":"),port:port});
+				const url = this.options.url.split(":");
+				const port = url.pop();
+				this.connection.connect({
+					host: url.join(":"),
+					port: port
+				});
 			}
 		});
 	}
@@ -68,9 +73,10 @@ class Client extends Emitter {
 		this.connection = null;
 		this.emit(constants.Events.CLOSE, e || this._end);
 	}
-	_parse(data) {
+	_parse(_data) {
+		let data;
 		try {
-			data = JSON.parse(data);
+			data = JSON.parse(_data);
 		} catch(e) {
 			this.connection.emit(constants.ConnectionEvents.ERROR, e);
 			return;
@@ -79,9 +85,9 @@ class Client extends Emitter {
 			case constants.MessageTypes.CONNECTION:
 				if(data.d.compress) {
 					this.connection.zlib = {
-						pack: this._zlib(constants.ZlibDeflator),
-						unpack: this._zlib(constants.ZlibInflator)
-					}
+						deflate: new this._zlib.DeflateRaw(),
+						inflate: new this._zlib.InflateRaw()
+					};
 				}
 				this.connection.emit(constants.ConnectionEvents.DONE, data.d);
 				break;
@@ -119,7 +125,7 @@ class Client extends Emitter {
 	}
 }
 
-for(let [method, value] of Object.entries(interfaces)) {
+for(const [method, value] of Object.entries(interfaces)) {
 	Client.prototype[method] = value;
 }
 

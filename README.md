@@ -9,7 +9,7 @@ A simple message based IPC client/server providing bi-directional communication 
 * TCP for remote communication
 * Supports multiple clients
 * Supports request-response, survey and broadcast
-* Synchronous zlib-stream (requires installing "fast-zlib")
+* Supports Synchronous zlib-stream (requires installing "fast-zlib")
 * Sexy
 * Fast
 
@@ -32,9 +32,9 @@ server.on("ready", url => {
 
 server.on("error", console.error);
 
-server.on("connect", async (client, data) => {
+server.on("connect", (client, data) => {
     console.log(`received new connection and assigned it the id ${client.id}`);
-    console.log(`the connection send an initial payload containing ${data}`);
+    console.log(`the connection sent an initial payload containing ${data}`);
 });
 
 server.on("disconnect", (client, reason) => {
@@ -80,7 +80,7 @@ client.on("ready", async data => {
     console.log(response) // yes abcdefg
 
     let response2 = await client.request("haha", 1000).catch(e => "no response");
-    console.log(response2) // no response
+    console.log(response2) // no response, the server has no listener for "haha" requests
 
     await client.send("execute broadcast");
 
@@ -109,9 +109,9 @@ client.connect("hi").catch(console.error);
 ### Server Events
 
 * **`ready -> (address:string)`** - Emitted when the server starts listening.
-* **`error -> (error)`** - Emitted when an error occures. If there is no listener, the error will be swallowed.
-* **`connect -> (Client, payload:any)`** - Emitted when a new client connects. Includes the initial payload it exists.
-* **`disconnect -> (Client, reason:any)`** - Emitted when a client disconnects. Includes reason for disconnect if it exists.
+* **`error -> (Error)`** - Emitted when an error occures. If there is no listener, the error will be swallowed.
+* **`connect -> (Client, payload:any)`** - Emitted when a new client connects. Includes the initial payload if one exists.
+* **`disconnect -> (Client, reason:any)`** - Emitted when a client disconnects. Includes the reason for disconnect if one exists.
 * **`close -> ()`** - Emitted when the server is closed.
 * **`message -> (message:any, Client)`** - Emitted when the server receives a message from a client.
 * **`request -> (request:any, response:asyncFunction, Client)`** - Emitted when the server receives a request from a client.
@@ -121,8 +121,8 @@ client.connect("hi").catch(console.error);
 * **`.start() -> promise<Server>`** - Starts the server.
 * **`.close() -> promise<Server>`** - Disconnects all clients and closes the server.
 * **`.broadcast(data:any) -> promise<void>`** - Sends a message to all clients. Errors will be forwarded to the error event and wont reject the promise.
-* **`.survey(data:any, timeout:integer) -> promise<object[]>`** - Sends a request to all clients. Returns an array of objects containing promise statuses and results.
-* **`.ping(data:any) -> promise<object[]>`** - Sends a ping request to all clients. Returns an array of objects containing the promise statuses and results.
+* **`.survey(data:any, timeout:integer) -> promise<object[]>`** - Sends a request to all clients and waits for them to respond. Returns an array of objects containing promise statuses and results.
+* **`.ping(data:any) -> promise<object[]>`** - Sends a ping request to all clients and waits for them to respond. Returns an array of objects containing the promise statuses and results.
 
 ### Server Properties
 
