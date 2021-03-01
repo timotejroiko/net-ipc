@@ -4,7 +4,7 @@ const { Server: NetServer } = require("net");
 const { unlinkSync, statSync } = require("fs");
 const Emitter = require("events");
 const Connection = require("./connection.js");
-const constants = require("./constants.js");
+const { Options, Events, ConnectionEvents, ServerEvents, ErrorMessages } = require("./constants.js");
 
 module.exports = class Server extends Emitter {
 	constructor(options = {}) {
@@ -12,31 +12,31 @@ module.exports = class Server extends Emitter {
 		this.connections = [];
 		this.options = options;
 		this.server = null;
-		if(!this.options.port && !this.options.path) { this.options.path = constants.Options.DEFAULT_PATH; }
-		if(this.options.max && !Number.isInteger(this.options.max)) { throw constants.ErrorMessages.BAD_CONNECTIONS; }
-		if(this.options.port && !Number.isInteger(this.options.port)) { throw constants.ErrorMessages.BAD_PORT; }
-		if(this.options.path && typeof this.options.path !== "string") { throw constants.ErrorMessages.BAD_PATH; }
+		if(!this.options.port && !this.options.path) { this.options.path = Options.DEFAULT_PATH; }
+		if(this.options.max && !Number.isInteger(this.options.max)) { throw ErrorMessages.BAD_CONNECTIONS; }
+		if(this.options.port && !Number.isInteger(this.options.port)) { throw ErrorMessages.BAD_PORT; }
+		if(this.options.path && typeof this.options.path !== "string") { throw ErrorMessages.BAD_PATH; }
 		if(this.options.path && process.platform === "win32") { this.options.path = `\\\\.\\pipe\\${this.options.path.replace(/^\//, "").replace(/\//g, "-")}`; }
 	}
 	start() {
 		return new Promise((ok, nope) => {
 			if(this.server) {
-				nope(new Error(constants.ErrorMessages.SERVER_EXISTS));
+				nope(new Error(ErrorMessages.SERVER_EXISTS));
 				return;
 			}
 			this.server = new NetServer();
-			this.server.on(constants.ServerEvents.ERROR, this._onerror.bind(this));
-			this.server.on(constants.ServerEvents.CLOSE, this._onclose.bind(this));
-			this.server.on(constants.ServerEvents.CONNECTION, this._onconnection.bind(this));
-			this.server.on(constants.ServerEvents.LISTENING, this._onlistening.bind(this));
-			this.server.once(constants.ServerEvents.LISTENING, () => ok(this));
+			this.server.on(ServerEvents.ERROR, this._onerror.bind(this));
+			this.server.on(ServerEvents.CLOSE, this._onclose.bind(this));
+			this.server.on(ServerEvents.CONNECTION, this._onconnection.bind(this));
+			this.server.on(ServerEvents.LISTENING, this._onlistening.bind(this));
+			this.server.once(ServerEvents.LISTENING, () => ok(this));
 			if(this.options.max) { this.server.maxConnections = this.options.max; }
 			if(this.options.path) {
 				try { unlinkSync(this.options.path); } catch(e) { /* no-op */ }
 				try {
 					statSync(this.options.path);
 					this.close();
-					nope(new Error(`${constants.ErrorMessages.EADDRINUSE} - ${this.options.path}`));
+					nope(new Error(`${ErrorMessages.EADDRINUSE} - ${this.options.path}`));
 					return;
 				} catch(e) { /* no-op */ }
 				this.server.listen({ path: this.options.path });
@@ -52,18 +52,18 @@ module.exports = class Server extends Emitter {
 		if(this.server) {
 			this.server.close();
 			for(const client of this.connections) {
-				await client.close(constants.ErrorMessages.SERVER_CLOSED);
+				await client.close(ErrorMessages.SERVER_CLOSED);
 			}
 		}
 		return this;
 	}
 	async broadcast(data) {
 		for(const c of this.connections) {
-			await c.send(data).catch(e => this.emit(constants.Events.ERROR, e));
+			await c.send(data).catch(e => this.emit(Events.ERROR, e));
 		}
 	}
 	survey(data, timeout = 10000) {
-		if(!Number.isInteger(timeout)) { return Promise.reject(constants.ErrorMessages.BAD_TIMEOUT); }
+		if(!Number.isInteger(timeout)) { return Promise.reject(ErrorMessages.BAD_TIMEOUT); }
 		return Promise.allSettled(this.connections.map(c => c.request(data, timeout)));
 	}
 	ping(data) {
@@ -72,24 +72,24 @@ module.exports = class Server extends Emitter {
 	_onlistening() {
 		let address = this.server.address();
 		if(typeof address === "object") { address = `${address.address}:${address.port}`; }
-		this.emit(constants.Events.READY, address);
+		this.emit(Events.READY, address);
 	}
 	_onerror(e) {
-		if(this._events[constants.Events.ERROR]) {
-			this.emit(constants.Events.ERROR, e);
+		if(this._events[Events.ERROR]) {
+			this.emit(Events.ERROR, e);
 		}
 	}
 	_onclose() {
 		this.server.removeAllListeners();
 		this.server = null;
-		this.emit(constants.Events.CLOSE);
+		this.emit(Events.CLOSE);
 	}
 	_onconnection(socket) {
 		const client = new Connection(socket, this);
-		client.connection.once(constants.ConnectionEvents.READY, extras => {
+		client.connection.once(ConnectionEvents.READY, extras => {
 			if(!this.connections.find(t => t.id === client.id)) {
 				this.connections.push(client);
-				this.emit(constants.Events.CONNECT, client, extras);
+				this.emit(Events.CONNECT, client, extras);
 				client.connectedAt = Date.now();
 			}
 		});

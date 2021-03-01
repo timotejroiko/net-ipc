@@ -1,6 +1,6 @@
 "use strict";
 
-const constants = require("./constants.js");
+const { ConnectionEvents, MessageTypes, MessageDelimiter, ErrorMessages } = require("./constants.js");
 let _zlib;
 
 try {
@@ -9,20 +9,20 @@ try {
 
 module.exports = {
 	send(data) {
-		return this._write(constants.MessageTypes.MESSAGE, data);
+		return this._write(MessageTypes.MESSAGE, data);
 	},
 	request(data, timeout = 10000) {
-		if(!Number.isInteger(timeout)) { return Promise.reject(constants.ErrorMessages.BAD_TIMEOUT); }
+		if(!Number.isInteger(timeout)) { return Promise.reject(ErrorMessages.BAD_TIMEOUT); }
 		return new Promise((ok, nope) => {
 			const nonce = this._nonce();
 			this._requests[nonce] = [ok, nope];
-			this._write(constants.MessageTypes.REQUEST, data, nonce).catch(e => {
+			this._write(MessageTypes.REQUEST, data, nonce).catch(e => {
 				delete this._requests[nonce];
 				nope(e);
 			});
 			setTimeout(() => {
 				if(this._requests[nonce]) {
-					this._requests[nonce][1](constants.ErrorMessages.TIMEOUT);
+					this._requests[nonce][1](ErrorMessages.TIMEOUT);
 					delete this._requests[nonce];
 				}
 			}, timeout);
@@ -32,13 +32,13 @@ module.exports = {
 		return new Promise((ok, nope) => {
 			const nonce = this._nonce();
 			this._requests[nonce] = [ok, nope, Date.now()];
-			this._write(constants.MessageTypes.PING, data, nonce).catch(e => {
+			this._write(MessageTypes.PING, data, nonce).catch(e => {
 				delete this._requests[nonce];
 				nope(e);
 			});
 			setTimeout(() => {
 				if(this._requests[nonce]) {
-					this._requests[nonce][1](constants.ErrorMessages.TIMEOUT);
+					this._requests[nonce][1](ErrorMessages.TIMEOUT);
 					delete this._requests[nonce];
 				}
 			}, timeout);
@@ -48,7 +48,7 @@ module.exports = {
 		this.connection.closing = true;
 		return Promise.allSettled(this._drainQueue).then(() => {
 			this.connection.end({
-				t: constants.MessageTypes.END,
+				t: MessageTypes.END,
 				d: data
 			});
 			return true;
@@ -86,9 +86,9 @@ module.exports = {
 			this._buffer += data.toString();
 			let index = 0;
 			let next = 0;
-			while((next = this._buffer.indexOf(constants.MessageDelimiter, index)) > -1) {
+			while((next = this._buffer.indexOf(MessageDelimiter, index)) > -1) {
 				this._parse(this._buffer.slice(index, next));
-				index = next + constants.MessageDelimiter.length;
+				index = next + MessageDelimiter.length;
 			}
 			this._buffer = this._buffer.slice(index);
 		}
@@ -103,7 +103,7 @@ module.exports = {
 				d: data
 			};
 			if(nonce) { d.n = nonce; }
-			let packet = JSON.stringify(d, this._replacer()) + constants.MessageDelimiter;
+			let packet = JSON.stringify(d, this._replacer()) + MessageDelimiter;
 			if(this.connection.zlib) {
 				packet = this.connection.zlib.deflate.process(packet);
 			}
@@ -118,7 +118,7 @@ module.exports = {
 			}
 			return Promise.resolve(true);
 		} catch(e) {
-			this.connection.emit(constants.ConnectionEvents.ERROR, e);
+			this.connection.emit(ConnectionEvents.ERROR, e);
 			return Promise.resolve(false);
 		}
 	},
