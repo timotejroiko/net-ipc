@@ -49,7 +49,10 @@ class Connection {
 					id: this.id,
 					compress: data.d.compress && Boolean(this._zlib)
 				};
-				this._write(MessageTypes.CONNECTION, reply, data.n).catch(e => this.connection.emit(ConnectionEvents.ERROR, e));
+				this._write(MessageTypes.CONNECTION, reply, data.n).catch(e => {
+					this.connection.emit(ConnectionEvents.ERROR, e);
+					this.close(e);
+				});
 				if(reply.compress) {
 					this.connection.zlib = {
 						deflate: new this._zlib.DeflateRaw(),

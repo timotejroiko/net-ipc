@@ -25,7 +25,9 @@ module.exports = {
 		NO_RESPONSE: "no response",
 		UNKNOWN_ERROR: "unknown error",
 		ZLIB_MISSING: "WARNING: compression requires the 'fast-zlib' package to be installed (npm install fast-zlib)",
-		SERVER_CLOSED: "Server was shut down"
+		SERVER_CLOSED: "Server was shut down",
+		CONNECTION_CLOSED: "Failed to send, connection not available",
+		CONNECTION_DESTROYED: "Failed to send, connection was destroyed"
 	},
 	Events: {
 		READY: "ready",

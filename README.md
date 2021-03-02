@@ -126,7 +126,7 @@ client.connect("hi").catch(console.error);
 
 ### Server Properties
 
-* **`.connections -> Client[]`** - Array of currently connected clients.
+* **`.connections -> Client[]`** - Array of currently connected clients. Client instances are bidirectional, the same methods can be used from both ends.
 * **`.options -> object`** - Current server options.
 * **`.server -> net.Server`** - Internal instance of net.Server.
 
@@ -141,7 +141,7 @@ client.connect("hi").catch(console.error);
 ### Client Methods
 
 * **`.connect(payload:any) -> promise<Client>`** - connects to the server and optionally sends an initial payload.
-* **`.send(data:any) -> promise<bool>`** - Sends a message to the server.
+* **`.send(data:any) -> promise<void>`** - Sends a message to the server.
 * **`.request(data:any, timeout:integer) -> promise<any>`** - Sends a request to the server and waits for a response.
 * **`.ping(data:any) -> promise<integer>`** - Sends a ping request to the server.
 * **`.close(reason:any) -> promise<bool>`** - Finishes all pending jobs then closes the connection.

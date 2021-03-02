@@ -38,7 +38,10 @@ class Client extends Emitter {
 				this._write(MessageTypes.CONNECTION, {
 					compress: this.options.compress && Boolean(this._zlib),
 					extras: data
-				}).catch(e => this.connection.emit(ConnectionEvents.ERROR, e));
+				}).catch(e => {
+					this.connection.emit(ConnectionEvents.ERROR, e);
+					this.close(e);
+				});
 				this.connection.cork();
 			});
 			this.connection.once(ConnectionEvents.DONE, extras => {
