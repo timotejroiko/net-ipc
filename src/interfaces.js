@@ -47,10 +47,14 @@ module.exports = {
 	close(data) {
 		this.connection.closing = true;
 		return Promise.allSettled(this._drainQueue).then(() => {
-			this.connection.end({
+			let packet = JSON.stringify({
 				t: MessageTypes.END,
 				d: data
-			});
+			}, this._replacer()) + MessageDelimiter;
+			if(this.connection.zlib) {
+				packet = this.connection.zlib.deflate.process(packet);
+			}
+			this.connection.end(packet);
 			return true;
 		});
 	},
