@@ -51,7 +51,7 @@ class Connection {
 				};
 				this._write(MessageTypes.CONNECTION, reply, data.n).catch(e => {
 					this.connection.emit(ConnectionEvents.ERROR, e);
-					this.close(e);
+					this.connection.close(e);
 				});
 				if(reply.compress) {
 					this.connection.zlib = {

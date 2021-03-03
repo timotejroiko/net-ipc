@@ -40,7 +40,7 @@ class Client extends Emitter {
 					extras: data
 				}).catch(e => {
 					this.connection.emit(ConnectionEvents.ERROR, e);
-					this.close(e);
+					this.connection.close(e);
 				});
 				this.connection.cork();
 			});
