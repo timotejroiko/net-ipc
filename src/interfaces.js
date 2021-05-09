@@ -1,72 +1,82 @@
 "use strict";
 
-const { ConnectionEvents, MessageTypes, MessageDelimiter, ErrorMessages } = require("./constants.js");
-let _zlib;
+const {
+	ConnectionEvents,
+	MessageTypes,
+	MessageDelimiter,
+	ErrorMessages
+} = require("./constants.js");
 
+let _zlib;
 try {
 	_zlib = require("fast-zlib");
 } catch(e) { /* no-op */ }
 
 module.exports = {
 	send(data) {
-		return this._write(MessageTypes.MESSAGE, data);
+		return this._tryWrite(MessageTypes.MESSAGE, data);
 	},
 	request(data, timeout = 10000) {
 		if(!Number.isInteger(timeout)) { return Promise.reject(ErrorMessages.BAD_TIMEOUT); }
 		return new Promise((ok, nope) => {
 			const nonce = this._nonce();
-			this._requests[nonce] = [ok, nope];
-			this._write(MessageTypes.REQUEST, data, nonce).catch(e => {
+			this._requests[nonce] = {
+				resolve: ok,
+				reject: nope,
+				timer: timeout > 0 ? setTimeout(() => {
+					delete this._requests[nonce];
+					nope(ErrorMessages.TIMEOUT);
+				}, timeout) : null
+			};
+			this._tryWrite(MessageTypes.REQUEST, data, nonce).catch(e => {
+				if(this._requests[nonce].timer) { clearTimeout(this._requests[nonce].timer); }
 				delete this._requests[nonce];
 				nope(e);
 			});
-			setTimeout(() => {
-				if(this._requests[nonce]) {
-					this._requests[nonce][1](ErrorMessages.TIMEOUT);
-					delete this._requests[nonce];
-				}
-			}, timeout);
 		});
 	},
 	ping(data, timeout = 10000) {
 		if(!Number.isInteger(timeout)) { return Promise.reject(ErrorMessages.BAD_TIMEOUT); }
 		return new Promise((ok, nope) => {
 			const nonce = this._nonce();
-			this._requests[nonce] = [ok, nope, Date.now()];
-			this._write(MessageTypes.PING, data, nonce).catch(e => {
+			this._requests[nonce] = {
+				resolve: ok,
+				reject: nope,
+				date: Date.now(),
+				timer: timeout > 0 ? setTimeout(() => {
+					delete this._requests[nonce];
+					nope(ErrorMessages.TIMEOUT);
+				}, timeout) : null
+			};
+			this._tryWrite(MessageTypes.PING, data, nonce).catch(e => {
+				if(this._requests[nonce].timer) { clearTimeout(this._requests[nonce].timer); }
 				delete this._requests[nonce];
 				nope(e);
 			});
-			setTimeout(() => {
-				if(this._requests[nonce]) {
-					this._requests[nonce][1](ErrorMessages.TIMEOUT);
-					delete this._requests[nonce];
-				}
-			}, timeout);
 		});
 	},
-	close(data) {
-		this.connection.closing = true;
-		return Promise.allSettled(this._drainQueue).then(() => {
-			const packet = this._pack({
-				t: MessageTypes.END,
-				d: data
-			});
-			this.connection.end(packet);
-			return true;
+	async close(data) {
+		this._closed = true;
+		await Promise.allSettled(this._drainQueue);
+		const packet = this._pack({
+			t: MessageTypes.END,
+			d: data
 		});
+		await new Promise(ok => {
+			this.connection.end(packet, void 0, ok);
+		});
+		return true;
 	},
 	destroy(data) {
-		this.connection.closing = true;
-		const n = this._drainQueue.length;
-		for(let i = 0; i < n; i++) {
+		this._closed = true;
+		for(let i = 0; i < this._drainQueue.length; i++) {
 			this._drainQueue.shift().reject(new Error(ErrorMessages.CONNECTION_DESTROYED));
 		}
 		this.connection.destroy(data);
 		return true;
 	},
 	_nonce() {
-		return Math.floor(Math.random() * 999999999999).toString(36) + Date.now().toString(36);
+		return Math.floor(Math.random() * Number.MAX_SAFE_INTEGER).toString(36) + Date.now().toString(36);
 	},
 	_replacer() {
 		const seen = new WeakSet();
@@ -99,7 +109,7 @@ module.exports = {
 		}
 	},
 	_write(op, data, nonce) {
-		if(!this.connection || this.connection.closing || !this.connection.writable) {
+		if(!this.connection || !this.connection.writable) {
 			return Promise.reject(new Error(ErrorMessages.CONNECTION_CLOSED));
 		}
 		try {
@@ -110,29 +120,34 @@ module.exports = {
 			if(nonce) { d.n = nonce; }
 			const packet = this._pack(d);
 			const sent = this.connection.write(packet);
-			if(sent) {
-				return Promise.resolve();
-			}
-			return new Promise((resolve, reject) => {
-				this._drainQueue.push({
-					resolve,
-					reject
-				});
+			if(sent) { return Promise.resolve(); }
+			let resolve;
+			let reject;
+			const promise = new Promise((ok, nope) => {
+				resolve = ok;
+				reject = nope;
 			});
+			promise.resolve = resolve;
+			promise.reject = reject;
+			this._drainQueue.push(promise);
+			return promise;
 		} catch(e) {
 			this.connection.emit(ConnectionEvents.ERROR, e);
 			return Promise.reject(e);
 		}
 	},
 	_pack(data) {
-		let packet = JSON.stringify(data, this._replacer()) + MessageDelimiter;
+		const d = JSON.stringify(data.d, this._replacer());
+		let packet = `{"t":${data.t}${data.n ? `,"n":"${data.n}"` : ""}${d ? `,"d":${d}` : ""}}${MessageDelimiter}`;
 		if(this.connection.zlib) {
 			packet = this.connection.zlib.deflate.process(packet);
 		}
 		return packet;
 	},
 	_drain() {
-		this._drainQueue.shift().resolve();
+		for(let i = 0; i < this._drainQueue.length; i++) {
+			this._drainQueue.shift().resolve();
+		}
 	},
 	_drainQueue: [],
 	_requests: {},

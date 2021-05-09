@@ -31,7 +31,6 @@
 	},
 	"license": "MIT",
 	"devDependencies": {
-		"eslint": "^7.16.0",
-		"@yarnpkg/pnpify": "^2.4.0"
+		"eslint": "^7.25.0"
 	}
 }

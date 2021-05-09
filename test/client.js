@@ -22,13 +22,13 @@ console.log("clients started");
 	await requestTest(c02, "tcp request");
 
 	const c03 = await c2.connect();
-	if(c03.options.compress) {
+	if(c03._compress) {
 		await messageTest(c03, "compressed socket");
 		await requestTest(c03, "compressed socket request");
 	}
 
 	const c04 = await c4.connect();
-	if(c04.options.compress) {
+	if(c04._compress) {
 		await messageTest(c04, "compressed tcp");
 		await requestTest(c04, "compressed tcp request");
 	}

@@ -4,19 +4,26 @@ const { Server: NetServer } = require("net");
 const { unlinkSync, statSync } = require("fs");
 const Emitter = require("events");
 const Connection = require("./connection.js");
-const { Options, Events, ConnectionEvents, ServerEvents, ErrorMessages } = require("./constants.js");
+const {
+	Options,
+	Events,
+	ConnectionEvents,
+	ServerEvents,
+	ErrorMessages
+} = require("./constants.js");
 
 module.exports = class Server extends Emitter {
 	constructor(options = {}) {
 		super();
+		this.options = { ...options };
 		this.connections = [];
-		this.options = options;
 		this.server = null;
 		if(!this.options.port && !this.options.path) { this.options.path = Options.DEFAULT_PATH; }
-		if(this.options.max && !Number.isInteger(this.options.max)) { throw ErrorMessages.BAD_CONNECTIONS; }
-		if(this.options.port && !Number.isInteger(this.options.port)) { throw ErrorMessages.BAD_PORT; }
-		if(this.options.path && typeof this.options.path !== "string") { throw ErrorMessages.BAD_PATH; }
+		if(this.options.max && !Number.isInteger(this.options.max)) { throw new Error(ErrorMessages.BAD_CONNECTIONS); }
+		if(this.options.port && !Number.isInteger(this.options.port)) { throw new Error(ErrorMessages.BAD_PORT); }
+		if(this.options.path && typeof this.options.path !== "string") { throw new Error(ErrorMessages.BAD_PATH); }
 		if(this.options.path && process.platform === "win32") { this.options.path = `\\\\.\\pipe\\${this.options.path.replace(/^\//, "").replace(/\//g, "-")}`; }
+		if(!Number.isInteger(this.options.retries) || this.options.retries < 0) { this.options.retries = 3; }
 	}
 	start() {
 		return new Promise((ok, nope) => {
@@ -86,17 +93,14 @@ module.exports = class Server extends Emitter {
 	}
 	_onconnection(socket) {
 		const client = new Connection(socket, this);
-		client.connection.once(ConnectionEvents.READY, extras => {
-			if(!this.connections.find(t => t.id === client.id)) {
-				this.connections.push(client);
-				this.emit(Events.CONNECT, client, extras);
-				client.connectedAt = Date.now();
-			}
-		});
-		setTimeout(() => {
-			if(!client.connectedAt) {
-				client.close();
-			}
+		const timer = setTimeout(() => {
+			client.close();
 		}, 10000);
+		client.connection.once(ConnectionEvents.READY, extras => {
+			clearTimeout(timer);
+			client.connectedAt = Date.now();
+			this.connections.push(client);
+			this.emit(Events.CONNECT, client, extras);
+		});
 	}
 };

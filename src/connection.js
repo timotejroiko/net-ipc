@@ -6,29 +6,36 @@ const interfaces = require("./interfaces.js");
 class Connection {
 	constructor(socket, server) {
 		this.server = server;
-		this.connection = socket;
 		this.id = this._nonce();
+		this.connection = socket;
 		this.connection.on(ConnectionEvents.ERROR, this._onerror.bind(this));
 		this.connection.on(ConnectionEvents.CLOSE, this._onclose.bind(this));
 		this.connection.on(ConnectionEvents.READABLE, this._read.bind(this, this.connection));
 		this.connection.on(ConnectionEvents.DRAIN, this._drain.bind(this));
+		this._error = null;
+		this._end = null;
+		this._retries = this.server.options.retries;
+		this._closed = false;
 	}
 	_onerror(e) {
+		this._error = e;
 		if(this.server._events[Events.ERROR]) {
 			this.server.emit(Events.ERROR, e, this);
 		}
-		if(this.server.connections.findIndex(c => c.id === this.id) === -1) {
+		if(!this.server.connections.find(c => c.id === this.id)) {
 			this.close(ErrorMessages.ORPHAN_CONNECTION);
 		}
 	}
-	_onclose(e) {
-		this.connection.destroy();
+	_onclose() {
 		this.connection.removeAllListeners();
+		this.connection.destroy();
 		this.connection = null;
-		const index = this.server.connections.findIndex(c => c.id === this.id);
+		const array = this.server.connections;
+		const index = array.findIndex(c => c.id === this.id);
 		if(index > -1) {
-			this.server.emit(Events.DISCONNECT, this, e || this._end);
-			this.server.connections.splice(index, 1);
+			this.server.emit(Events.DISCONNECT, this, this._end || this._error);
+			array[index] = array[array.length - 1];
+			array.pop();
 		}
 	}
 	_parse(_data) {
@@ -39,19 +46,20 @@ class Connection {
 			this.connection.emit(ConnectionEvents.ERROR, e);
 			return;
 		}
-		if(data.t !== MessageTypes.CONNECTION && !this.connectedAt) {
+		if(!this.connectedAt && data.t !== MessageTypes.CONNECTION) {
 			this.connection.emit(ConnectionEvents.ERROR, new Error(ErrorMessages.PREMATURE_PACKET));
 			return;
 		}
 		switch(data.t) {
 			case MessageTypes.CONNECTION: {
+				if(data.d.id) { this.id = data.d.id; }
 				const reply = {
 					id: this.id,
 					compress: data.d.compress && Boolean(this._zlib)
 				};
 				this._write(MessageTypes.CONNECTION, reply, data.n).catch(e => {
 					this.connection.emit(ConnectionEvents.ERROR, e);
-					this.connection.close(e);
+					this.connection.destroy(e);
 				});
 				if(reply.compress) {
 					this.connection.zlib = {
@@ -68,26 +76,30 @@ class Connection {
 			}
 			case MessageTypes.REQUEST: {
 				if(this.server._events[Events.REQUEST]) {
-					this.server.emit(Events.REQUEST, data.d, response => this._write(MessageTypes.RESPONSE, response, data.n), this);
+					this.server.emit(Events.REQUEST, data.d, response => this._tryWrite(MessageTypes.RESPONSE, response, data.n), this);
 				} else {
-					this._write(MessageTypes.RESPONSE, void 0, data.n).catch(e => this.connection.emit(ConnectionEvents.ERROR, e));
+					this._tryWrite(MessageTypes.RESPONSE, void 0, data.n).catch(e => this.connection.emit(ConnectionEvents.ERROR, e));
 				}
 				break;
 			}
 			case MessageTypes.RESPONSE: {
-				if(this._requests[data.n]) {
-					this._requests[data.n][0](data.d);
+				const stored = this._requests[data.n];
+				if(stored) {
+					if(stored.timer) { clearTimeout(stored.timer); }
+					stored.resolve(data.d);
 					delete this._requests[data.n];
 				}
 				break;
 			}
 			case MessageTypes.PING: {
-				this._write(MessageTypes.PONG, data.d, data.n).catch(e => this.connection.emit(ConnectionEvents.ERROR, e));
+				this._tryWrite(MessageTypes.PONG, data.d, data.n).catch(e => this.connection.emit(ConnectionEvents.ERROR, e));
 				break;
 			}
 			case MessageTypes.PONG: {
-				if(this._requests[data.n]) {
-					this._requests[data.n][0](Date.now() - this._requests[data.n][2]);
+				const stored = this._requests[data.n];
+				if(stored) {
+					if(stored.timer) { clearTimeout(stored.timer); }
+					stored.resolve(Date.now() - stored.date);
 					delete this._requests[data.n];
 				}
 				break;
@@ -98,6 +110,22 @@ class Connection {
 				}
 				break;
 			}
+		}
+	}
+	async _tryWrite(op, data, nonce, r = 0) {
+		if(this._closed) { throw new Error(ErrorMessages.CONNECTION_CLOSED); }
+		try {
+			const sent = await this._write(op, data, nonce);
+			return sent;
+		} catch(e) {
+			if(this._retries && this._retries > r) {
+				for(let i = r; i < this._retries; i++) {
+					await new Promise(resolve => { setTimeout(resolve, 500 * (i + 1)); });
+					const connection = this.server.connections.find(c => c.id === this.id);
+					if(connection) { return connection._tryWrite(op, data, nonce, i); }
+				}
+			}
+			return new Error(e);
 		}
 	}
 }
