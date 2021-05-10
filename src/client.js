@@ -18,12 +18,16 @@ class Client extends Emitter {
 		this.connection = null;
 		this.id = null;
 		this.status = ClientStatus.IDLE;
+		this.options = {
+			compress: Boolean(options.compress),
+			reconnect: typeof options.reconnect !== "undefined" ? Boolean(options.reconnect) : true,
+			retries: Number.isInteger(options.retries) && options.retries > 0 ? options.retries : 3
+		};
 		this._error = null;
 		this._end = null;
 		this._promise = null;
-		this._compress = Boolean(options.compress);
-		this._reconnect = typeof options.reconnect !== "undefined" ? Boolean(options.reconnect) : true;
-		this._retries = Number.isInteger(options.retries) && options.retries > 0 ? options.retries : 3;
+		this._retries = 0;
+		this._payload = null;
 		this._url = options.url || null;
 		this._path = options.path || (options.url ? null : Options.DEFAULT_PATH);
 		if(this._url && typeof this._url !== "string") { throw new Error(ErrorMessages.BAD_URL); }
@@ -38,10 +42,9 @@ class Client extends Emitter {
 			}
 			this._promise = {
 				resolve: ok,
-				reject: nope,
-				payload: data,
-				retries: 0
+				reject: nope
 			};
+			this._payload = data;
 			this.connection = new Socket();
 			this.connection.setKeepAlive(true);
 			this.connection.on(ConnectionEvents.ERROR, this._onerror.bind(this));
@@ -80,24 +83,29 @@ class Client extends Emitter {
 		this._error = null;
 		this._end = null;
 		this._promise = null;
-		if(this._reconnect) {
+		if(this.options.reconnect) {
 			this._setStatus(ClientStatus.RECONNECTING);
-			if(promise) {
-				setTimeout(() => {
-					this._setStatus(ClientStatus.IDLE);
-					if(promise.retries > this._retries) {
+			setTimeout(() => {
+				this._setStatus(ClientStatus.IDLE);
+				const exceeded = this._retries > this.options.retries;
+				if(exceeded) {
+					if(promise) {
+						this._retries = 0;
 						promise.reject(error || ErrorMessages.UNKNOWN_ERROR);
 					} else {
-						promise.resolve(this.connect(promise.payload));
+						this.emit(Events.CLOSE, end || error);
 					}
-				}, 500 * ++promise.retries);
-			} else {
-				setTimeout(() => {
-					this.connect(this._payload).catch(() => { /* no-op */});
-				}, 500);
-			}
+				} else if(promise) {
+					promise.resolve(this.connect(this._payload));
+				} else {
+					this.connect(this._payload).catch(e => {
+						this.emit(Events.CLOSE, e);
+					});
+				}
+			}, 500 * ++this._retries);
 		} else {
 			this._setStatus(ClientStatus.IDLE);
+			this._retries = 0;
 			this.emit(Events.CLOSE, end || error);
 		}
 	}
@@ -107,16 +115,18 @@ class Client extends Emitter {
 		this.connection.on(ConnectionEvents.DRAIN, this._drain.bind(this));
 		this.connection.once(ConnectionEvents.DONE, extras => {
 			this.id = extras.id;
-			if(this._compress && !extras.compress) {
-				this._compress = false;
+			if(this.options.compress && !extras.compress) {
+				this.options.compress = false;
 				console.warn(ErrorMessages.ZLIB_MISSING);
 			}
 			this._setStatus(ClientStatus.READY);
-			this.emit(Events.READY, extras);
 			this._promise.resolve(this);
+			this._promise = null;
+			this._retries = 0;
+			this.emit(Events.READY, extras);
 		});
 		const payload = {
-			compress: this._compress && Boolean(this._zlib),
+			compress: this.options.compress && Boolean(this._zlib),
 			extras: this._promise.payload,
 			id: this.id
 		};
@@ -197,7 +207,7 @@ class Client extends Emitter {
 			const sent = await this._write(op, data, nonce);
 			return sent;
 		} catch(e) {
-			if(this._reconnect && this._retries > r) {
+			if(this.options.reconnect && this.options.retries > r) {
 				const retries = r + 1;
 				await new Promise(resolve => { setTimeout(resolve, 500 * retries); });
 				return this._tryWrite(op, data, nonce, retries);

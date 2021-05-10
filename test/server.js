@@ -20,12 +20,12 @@ const received = {};
 
 socket.on("connect", client => {
 	console.log(`\n[SOCKET SERVER] new connection received, assigned client id ${client.id}`);
-	received[client.id] = 0;
+	if(!received[client.id]) { received[client.id] = 0; }
 	client.connection.on("data", d => { received[client.id] += d.toString().length; });
 });
 tcp.on("connect", client => {
 	console.log(`\n[TCP SERVER] new connection received, assigned client id ${client.id}`);
-	received[client.id] = 0;
+	if(!received[client.id]) { received[client.id] = 0; }
 	client.connection.on("data", d => { received[client.id] += d.toString().length; });
 });
 

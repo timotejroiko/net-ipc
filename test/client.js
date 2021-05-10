@@ -22,13 +22,13 @@ console.log("clients started");
 	await requestTest(c02, "tcp request");
 
 	const c03 = await c2.connect();
-	if(c03._compress) {
+	if(c03.options.compress) {
 		await messageTest(c03, "compressed socket");
 		await requestTest(c03, "compressed socket request");
 	}
 
 	const c04 = await c4.connect();
-	if(c04._compress) {
+	if(c04.options.compress) {
 		await messageTest(c04, "compressed tcp");
 		await requestTest(c04, "compressed tcp request");
 	}
@@ -46,6 +46,10 @@ async function messageTest(client, test) {
 	client.send({ test: `${data.length} random strings` });
 	let timer = Date.now();
 	for(const d of data) {
+		if(Math.random() < 0.00001) {
+			console.log("[TEST SIMULATED DISCONNECTION]");
+			client.connection.end();
+		}
 		await client.send({ data: d });
 	}
 	console.log(`[CLIENT] sent ${data.length} messages in ${Date.now() - timer}ms`);
