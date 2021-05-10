@@ -133,6 +133,8 @@ client.connect("hi").catch(console.error);
 * **`.broadcast(data:any) -> promise<void>`** - Sends a message to all clients. Errors will be forwarded to the error event and wont reject the promise.
 * **`.survey(data:any, timeout?:integer) -> promise<object[]>`** - Sends a request to all clients and waits for them to respond. Returns an array of objects containing promise statuses and results. Timeout is 10 seconds by default. Set to 0 to wait forever.
 * **`.ping(data:any) -> promise<object[]>`** - Sends a ping request to all clients and waits for them to respond. Returns an array of objects containing the promise statuses and results.
+* **`.pause() -> void`** - Pause receiving messages on all connections. Messages will be queued by their clients.
+* **`.resume() -> void`** - Resume receiving messages on all connections. Queued messages will be immediately emitted.
 
 ### Server Properties
 
@@ -145,6 +147,8 @@ client.connect("hi").catch(console.error);
 * **`.send(data:any) -> promise<void>`** - Sends a message to the corresponding client.
 * **`.request(data:any, timeout?:integer) -> promise<any>`** - Sends a request to the corresponding client and waits for a response. Timeout is 10 seconds by default. Set to 0 to wait forever.
 * **`.ping(data:any) -> promise<integer>`** - Sends a ping request to the corresponding client.
+* **`.pause() -> void`** - Pause receiving messages on this connection. Messages will be queued on the client side.
+* **`.resume() -> void`** - Resume receiving messages on this connection. Queued messages will be immediately emitted.
 * **`.close(reason:any) -> promise<bool>`** - Finishes all pending jobs then closes the connection.
 * **`.destroy(reason:any) -> bool`** - Rejects all pending jobs and closes the connection.
 
@@ -176,6 +180,7 @@ client.connect("hi").catch(console.error);
 
 * **`.id -> string?`** - The ID assigned to the client by the server after connecting.
 * **`.status -> integer`** - Current client status.
+* **`.options -> object`** - Current client options.
 * **`.connection -> net.Client`** - Internal instance of net.Client.
 
 ### Client Statuses

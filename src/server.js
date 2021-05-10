@@ -76,6 +76,16 @@ module.exports = class Server extends Emitter {
 	ping(data) {
 		return Promise.allSettled(this.connections.map(c => c.ping(data)));
 	}
+	pause() {
+		for(const c of this.connections) {
+			c.pause();
+		}
+	}
+	resume() {
+		for(const c of this.connections) {
+			c.resume();
+		}
+	}
 	_onlistening() {
 		let address = this.server.address();
 		if(typeof address === "object") { address = `${address.address}:${address.port}`; }

@@ -10,12 +10,18 @@ class Connection {
 		this.connection = socket;
 		this.connection.on(ConnectionEvents.ERROR, this._onerror.bind(this));
 		this.connection.on(ConnectionEvents.CLOSE, this._onclose.bind(this));
-		this.connection.on(ConnectionEvents.READABLE, this._read.bind(this, this.connection));
+		this.connection.on(ConnectionEvents.DATA, this._read.bind(this));
 		this.connection.on(ConnectionEvents.DRAIN, this._drain.bind(this));
 		this._error = null;
 		this._end = null;
 		this._retries = this.server.options.retries;
 		this._closed = false;
+	}
+	pause() {
+		this.connection.pause();
+	}
+	resume() {
+		this.connection.resume();
 	}
 	_onerror(e) {
 		this._error = e;

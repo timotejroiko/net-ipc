@@ -45,7 +45,7 @@ module.exports = {
 	ConnectionEvents: {
 		ERROR: "error",
 		CLOSE: "close",
-		READABLE: "readable",
+		DATA: "data",
 		READY: "ready",
 		DONE: "done",
 		DRAIN: "drain"

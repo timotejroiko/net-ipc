@@ -111,7 +111,7 @@ class Client extends Emitter {
 	}
 	_ready() {
 		this._setStatus(ClientStatus.CONNECTED);
-		this.connection.on(ConnectionEvents.READABLE, this._read.bind(this, this.connection));
+		this.connection.on(ConnectionEvents.DATA, this._read.bind(this));
 		this.connection.on(ConnectionEvents.DRAIN, this._drain.bind(this));
 		this.connection.once(ConnectionEvents.DONE, extras => {
 			this.id = extras.id;

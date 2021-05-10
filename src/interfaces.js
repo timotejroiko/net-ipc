@@ -92,21 +92,16 @@ module.exports = {
 			return value;
 		};
 	},
-	_read(stream) {
-		let data;
-		while(stream.readable && (data = stream.read())) {
-			if(this.connection.zlib) {
-				data = this.connection.zlib.inflate.process(data);
-			}
-			this._buffer += data.toString();
-			let index = 0;
-			let next = 0;
-			while((next = this._buffer.indexOf(MessageDelimiter, index)) > -1) {
-				this._parse(this._buffer.slice(index, next));
-				index = next + MessageDelimiter.length;
-			}
-			this._buffer = this._buffer.slice(index);
+	_read(d) {
+		const data = this.connection.zlib ? this.connection.zlib.inflate.process(d) : d;
+		this._buffer += data.toString();
+		let index = 0;
+		let next = 0;
+		while((next = this._buffer.indexOf(MessageDelimiter, index)) > -1) {
+			this._parse(this._buffer.slice(index, next));
+			index = next + MessageDelimiter.length;
 		}
+		this._buffer = this._buffer.slice(index);
 	},
 	_write(op, data, nonce) {
 		if(!this.connection || !this.connection.writable) {
