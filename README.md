@@ -8,8 +8,9 @@ A simple message based IPC client/server providing bi-directional communication 
 * Unix/Windows sockets for local communication
 * TCP for remote communication
 * Supports multiple clients
-* Supports request-response, survey and broadcast
-* Supports Synchronous zlib-stream (requires installing "fast-zlib")
+* Supports request-response, survey and broadcast operations
+* Built-in zlib support (requires installing `fast-zlib`)
+* Built-in messagepack support (requires installing `msgpackr`)
 * Sexy
 * Fast
 
@@ -35,7 +36,11 @@ server.on("error", console.error);
 
 server.on("connect", (client, data) => {
     console.log(`received new connection and assigned it the id ${client.id}`);
+    // initia payload can be used for authorizing
     console.log(`the connection sent an initial payload containing ${data}`);
+    if(data !== "hi") {
+        client.close("permission denied");
+    }
 });
 
 server.on("disconnect", (client, reason) => {
@@ -78,7 +83,8 @@ const client = new Client({
     url: "localhost:8333", // for TCP
     // path: "mypath", // for sockets
     // compress: true // enable zlib-stream compression (requires installing "fast-zlib")
-    // reconnect: true // autoreconenct on unnatural disconnections (default true)
+    // messagepack: true // enable messagepack serialization (requires installing "msgpackr")
+    // reconnect: true // auto-reconenct on unnatural disconnections (default true)
     // retries: 5 // number of retries in case of unnatural disconnections (default 3)
 });
 
@@ -107,6 +113,7 @@ client.on("request", (req, res) => {
     res("response").catch(console.error);
 });
 
+// send optional initial payload, for example for authorizing
 client.connect("hi").catch(console.error);
 ```
 

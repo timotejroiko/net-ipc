@@ -4,10 +4,26 @@ const { Client } = require("../index.js");
 
 const c1 = new Client();
 const c2 = new Client({ compress: true });
+const c22 = new Client({ messagepack: true });
+const c222 = new Client({
+	compress: true,
+	messagepack: true
+});
+
 const c3 = new Client({ url: "localhost:8333" });
 const c4 = new Client({
 	url: "localhost:8333",
 	compress: true
+});
+const c44 = new Client({
+	url: "localhost:8333",
+	compress: false,
+	messagepack: true
+});
+const c444 = new Client({
+	url: "localhost:8333",
+	compress: true,
+	messagepack: true
 });
 
 console.log("clients started");
@@ -17,21 +33,33 @@ console.log("clients started");
 	await messageTest(c01, "socket");
 	await requestTest(c01, "socket request");
 
-	const c02 = await c3.connect();
-	await messageTest(c02, "tcp");
-	await requestTest(c02, "tcp request");
+	const c02 = await c2.connect();
+	await messageTest(c02, "compressed socket");
+	await requestTest(c02, "compressed socket request");
 
-	const c03 = await c2.connect();
-	if(c03.options.compress) {
-		await messageTest(c03, "compressed socket");
-		await requestTest(c03, "compressed socket request");
-	}
+	const c022 = await c22.connect();
+	await messageTest(c022, "messagepack socket");
+	await requestTest(c022, "messagepack socket request");
+
+	const c0222 = await c222.connect();
+	await messageTest(c0222, "compressed messagepack socket");
+	await requestTest(c0222, "compressed messagepack socket request");
+
+	const c03 = await c3.connect();
+	await messageTest(c03, "tcp");
+	await requestTest(c03, "tcp request");
 
 	const c04 = await c4.connect();
-	if(c04.options.compress) {
-		await messageTest(c04, "compressed tcp");
-		await requestTest(c04, "compressed tcp request");
-	}
+	await messageTest(c04, "compressed tcp");
+	await requestTest(c04, "compressed tcp request");
+
+	const c044 = await c44.connect();
+	await messageTest(c044, "messagepack tcp");
+	await requestTest(c044, "messagepack tcp request");
+
+	const c0444 = await c444.connect();
+	await messageTest(c0444, "compressed messagepack tcp");
+	await requestTest(c0444, "compressed messagepack tcp request");
 
 	await c01.send("finish");
 
@@ -46,10 +74,12 @@ async function messageTest(client, test) {
 	client.send({ test: `${data.length} random strings` });
 	let timer = Date.now();
 	for(const d of data) {
+		/*
 		if(Math.random() < 0.00001) {
 			console.log("[TEST SIMULATED DISCONNECTION]");
 			client.connection.end();
 		}
+		*/
 		await client.send({ data: d });
 	}
 	console.log(`[CLIENT] sent ${data.length} messages in ${Date.now() - timer}ms`);

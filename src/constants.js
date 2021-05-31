@@ -1,7 +1,6 @@
 "use strict";
 
 module.exports = {
-	MessageDelimiter: "\x04",
 	MessageTypes: {
 		CONNECTION: 0,
 		MESSAGE: 1,
@@ -19,13 +18,12 @@ module.exports = {
 		BAD_PORT: "invalid TCP port",
 		BAD_PATH: "invalid socket path",
 		BAD_URL: "invalid URL",
-		BAD_RETRIES: "invalid number of retries",
 		SERVER_EXISTS: "server already exists",
 		EADDRINUSE: "EADDRINUSE: address already in use",
 		ORPHAN_CONNECTION: "closing orphaned connection",
-		NO_RESPONSE: "no response",
 		UNKNOWN_ERROR: "unknown error",
 		ZLIB_MISSING: "WARNING: compression requires the 'fast-zlib' package to be installed (npm install fast-zlib)",
+		MSGPACK_MISSING: "WARNING: messagepack requires the 'msgpackr' package to be installed (npm install msgpackr)",
 		SERVER_CLOSED: "Server was shut down",
 		CONNECTION_CLOSED: "Failed to send, connection not available",
 		CONNECTION_DESTROYED: "Failed to send, connection was destroyed",

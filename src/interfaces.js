@@ -3,13 +3,17 @@
 const {
 	ConnectionEvents,
 	MessageTypes,
-	MessageDelimiter,
 	ErrorMessages
 } = require("./constants.js");
 
 let _zlib;
 try {
 	_zlib = require("fast-zlib");
+} catch(e) { /* no-op */ }
+
+let _msgpack;
+try {
+	_msgpack = require("msgpackr");
 } catch(e) { /* no-op */ }
 
 module.exports = {
@@ -92,16 +96,62 @@ module.exports = {
 			return value;
 		};
 	},
+	/*
 	_read(d) {
 		const data = this.connection.zlib ? this.connection.zlib.inflate.process(d) : d;
 		this._buffer += data.toString();
 		let index = 0;
 		let next = 0;
 		while((next = this._buffer.indexOf(MessageDelimiter, index)) > -1) {
-			this._parse(this._buffer.slice(index, next));
+			const json = JSON.parse(this._buffer.slice(index, next));
+			// const json = unpack(Buffer.from(this._buffer.slice(index, next), "base64"));
+			this._parse(json);
 			index = next + MessageDelimiter.length;
 		}
 		this._buffer = this._buffer.slice(index);
+	},
+	*/
+	_read(d) {
+		const data = this.connection.zlib ? this.connection.zlib.inflate.process(d) : d;
+		this._buffer += data.toString();
+		while(this._buffer.length) {
+			const buffer = this._buffer;
+			const bufferLength = buffer.length;
+			const dataHeader = buffer.charCodeAt(0) >> 6;
+			let dataLength = 0;
+			switch(dataHeader) {
+				case 0: {
+					dataLength = buffer.charCodeAt(0) & 63;
+					break;
+				}
+				case 1: {
+					if(bufferLength < 2) { return; }
+					dataLength = ((buffer.charCodeAt(0) & 63) << 8) + buffer.charCodeAt(1);
+					break;
+				}
+				case 2: {
+					if(bufferLength < 3) { return; }
+					dataLength = ((((buffer.charCodeAt(0) & 63) << 8) + buffer.charCodeAt(1)) << 8) + buffer.charCodeAt(2);
+					break;
+				}
+				case 3: {
+					if(bufferLength < 4) { return; }
+					dataLength = ((((((buffer.charCodeAt(0) & 63) << 8) + buffer.charCodeAt(1)) << 8) + buffer.charCodeAt(2)) << 8) + buffer.charCodeAt(3);
+					break;
+				}
+			}
+			const start = dataHeader + 1;
+			const end = start + dataLength;
+			if(bufferLength < end) { return; }
+			const slice = buffer.slice(start, end);
+			this._buffer = buffer.slice(end);
+			try {
+				const json = this.connection.msgpack ? this.connection.msgpack.unpack(Buffer.from(slice, "latin1")) : JSON.parse(slice);
+				this._parse(json);
+			} catch(e) {
+				this.connection.emit(ConnectionEvents.ERROR, e);
+			}
+		}
 	},
 	_write(op, data, nonce) {
 		if(!this.connection || !this.connection.writable) {
@@ -132,8 +182,24 @@ module.exports = {
 		}
 	},
 	_pack(data) {
-		const d = JSON.stringify(data.d, this._replacer());
-		let packet = `{"t":${data.t}${data.n ? `,"n":"${data.n}"` : ""}${d ? `,"d":${d}` : ""}}${MessageDelimiter}`;
+		let packet;
+		let length;
+		if(this.connection.msgpack) {
+			packet = this.connection.msgpack.pack(data).toString("latin1");
+		} else {
+			packet = JSON.stringify(data, this._replacer());
+		}
+		const L = packet.length;
+		if(L < (1 << 6)) {
+			length = String.fromCharCode(L);
+		} else if(L < (1 << 14)) {
+			length = String.fromCharCode((1 << 6) + (L >> 8), L & 255);
+		} else if(L < (1 << 22)) {
+			length = String.fromCharCode((2 << 6) + (L >> 16), (L >> 8) & 255, L & 255);
+		} else {
+			length = String.fromCharCode((3 << 6) + (L >> 24), (L >> 16) & 255, (L >> 8) & 255, L & 255);
+		}
+		packet = length + packet;
 		if(this.connection.zlib) {
 			packet = this.connection.zlib.deflate.process(packet);
 		}
@@ -147,5 +213,6 @@ module.exports = {
 	_drainQueue: [],
 	_requests: {},
 	_buffer: "",
-	_zlib
+	_zlib,
+	_msgpack
 };

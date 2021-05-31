@@ -44,14 +44,7 @@ class Connection {
 			array.pop();
 		}
 	}
-	_parse(_data) {
-		let data;
-		try {
-			data = JSON.parse(_data);
-		} catch(e) {
-			this.connection.emit(ConnectionEvents.ERROR, e);
-			return;
-		}
+	_parse(data) {
 		if(!this.connectedAt && data.t !== MessageTypes.CONNECTION) {
 			this.connection.emit(ConnectionEvents.ERROR, new Error(ErrorMessages.PREMATURE_PACKET));
 			return;
@@ -61,7 +54,8 @@ class Connection {
 				if(data.d.id) { this.id = data.d.id; }
 				const reply = {
 					id: this.id,
-					compress: data.d.compress && Boolean(this._zlib)
+					compress: data.d.compress && Boolean(this._zlib),
+					messagepack: data.d.messagepack && Boolean(this._msgpack)
 				};
 				this._write(MessageTypes.CONNECTION, reply, data.n).catch(e => {
 					this.connection.emit(ConnectionEvents.ERROR, e);
@@ -72,6 +66,9 @@ class Connection {
 						deflate: new this._zlib.DeflateRaw(),
 						inflate: new this._zlib.InflateRaw()
 					};
+				}
+				if(reply.messagepack) {
+					this.connection.msgpack = this._msgpack;
 				}
 				this.connection.emit(ConnectionEvents.READY, data.d.extras);
 				break;

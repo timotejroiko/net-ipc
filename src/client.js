@@ -20,6 +20,7 @@ class Client extends Emitter {
 		this.status = ClientStatus.IDLE;
 		this.options = {
 			compress: Boolean(options.compress),
+			messagepack: Boolean(options.messagepack),
 			reconnect: typeof options.reconnect !== "undefined" ? Boolean(options.reconnect) : true,
 			retries: Number.isInteger(options.retries) && options.retries > 0 ? options.retries : 3
 		};
@@ -119,6 +120,10 @@ class Client extends Emitter {
 				this.options.compress = false;
 				console.warn(ErrorMessages.ZLIB_MISSING);
 			}
+			if(this.options.messagepack && !extras.messagepack) {
+				this.options.messagepack = false;
+				console.warn(ErrorMessages.MSGPACK_MISSING);
+			}
 			this._setStatus(ClientStatus.READY);
 			this._promise.resolve(this);
 			this._promise = null;
@@ -127,6 +132,7 @@ class Client extends Emitter {
 		});
 		const payload = {
 			compress: this.options.compress && Boolean(this._zlib),
+			messagepack: this.options.messagepack && Boolean(this._msgpack),
 			extras: this._promise.payload,
 			id: this.id
 		};
@@ -139,14 +145,7 @@ class Client extends Emitter {
 		this.status = status;
 		this.emit(Events.STATUS, status);
 	}
-	_parse(_data) {
-		let data;
-		try {
-			data = JSON.parse(_data);
-		} catch(e) {
-			this.connection.emit(ConnectionEvents.ERROR, e);
-			return;
-		}
+	_parse(data) {
 		switch(data.t) {
 			case MessageTypes.CONNECTION: {
 				if(data.d.compress) {
@@ -154,6 +153,9 @@ class Client extends Emitter {
 						deflate: new this._zlib.DeflateRaw(),
 						inflate: new this._zlib.InflateRaw()
 					};
+				}
+				if(data.d.messagepack) {
+					this.connection.msgpack = this._msgpack;
 				}
 				this.connection.emit(ConnectionEvents.DONE, data.d);
 				break;

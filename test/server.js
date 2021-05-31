@@ -20,13 +20,15 @@ const received = {};
 
 socket.on("connect", client => {
 	console.log(`\n[SOCKET SERVER] new connection received, assigned client id ${client.id}`);
-	if(!received[client.id]) { received[client.id] = 0; }
-	client.connection.on("data", d => { received[client.id] += d.toString().length; });
+	const id = `socket${client.connection.msgpack ? " messagepack" : ""}${client.connection.zlib ? " zlib" : ""}`;
+	if(!received[id]) { received[id] = 0; }
+	client.connection.on("data", d => { received[id] += d.toString().length; });
 });
 tcp.on("connect", client => {
 	console.log(`\n[TCP SERVER] new connection received, assigned client id ${client.id}`);
-	if(!received[client.id]) { received[client.id] = 0; }
-	client.connection.on("data", d => { received[client.id] += d.toString().length; });
+	const id = `tcp${client.connection.msgpack ? " messagepack" : ""} ${client.connection.zlib ? " zlib" : ""}`;
+	if(!received[id]) { received[id] = 0; }
+	client.connection.on("data", d => { received[id] += d.toString().length; });
 });
 
 socket.on("disconnect", c => console.log("disconnected", c.id));
