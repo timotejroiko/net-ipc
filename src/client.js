@@ -84,7 +84,7 @@ class Client extends Emitter {
 		this._error = null;
 		this._end = null;
 		this._promise = null;
-		if(this.options.reconnect) {
+		if(this.options.reconnect && !this._closed) {
 			this._setStatus(ClientStatus.RECONNECTING);
 			setTimeout(() => {
 				this._setStatus(ClientStatus.IDLE);
@@ -196,7 +196,8 @@ class Client extends Emitter {
 			}
 			case MessageTypes.END: {
 				if(data.d) {
-					this._end = data.d;
+					this._end = data.d.m;
+					this._closed = !data.d.a;
 				}
 				break;
 			}

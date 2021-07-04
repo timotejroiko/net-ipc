@@ -156,8 +156,8 @@ client.connect("hi").catch(console.error);
 * **`.ping(data:any) -> promise<integer>`** - Sends a ping request to the corresponding client.
 * **`.pause() -> void`** - Pause receiving messages on this connection. Messages will be queued on the client side.
 * **`.resume() -> void`** - Resume receiving messages on this connection. Queued messages will be immediately emitted.
-* **`.close(reason:any) -> promise<bool>`** - Finishes all pending jobs then closes the connection.
-* **`.destroy(reason:any) -> bool`** - Rejects all pending jobs and closes the connection.
+* **`.close(reason:any, allowReconnect:bool) -> promise<bool>`** - Finishes all pending jobs then closes the connection. If allowReconnect is true, the client will attempt to auto-reconnect (false by default).
+* **`.destroy(reason:any) -> bool`** - Rejects all pending jobs and closes the connection. The client will attempt to auto-reconnect.
 
 ### Connection Properties
 
@@ -169,7 +169,7 @@ client.connect("hi").catch(console.error);
 
 * **`ready -> (response:object)`** - Emitted when the client connects to the server. Includes a server assigned id and compression status.
 * **`error -> (error)`** - Emitted when an error occures. If there is no listener, the error will be swallowed but the connection might still be closed depending on the error.
-* **`close -> (reason:any)`** - Emitted when the connection is closed. Includes the reason for closing if any.
+* **`close -> (reason:any)`** - Emitted when the connection is closed permanently. Includes the reason for closing if any.
 * **`status -> (status:integer)`** - Emitted when the connection suffers a status change, including disconnections and reconnections.
 * **`message -> (message:any)`** - Emitted when the client receives a message from a server.
 * **`request -> (request:any, response:asyncFunction)`** - Emitted when the client receives a request from a server.
@@ -180,8 +180,8 @@ client.connect("hi").catch(console.error);
 * **`.send(data:any) -> promise<void>`** - Sends a message to the server.
 * **`.request(data:any, timeout?:integer) -> promise<any>`** - Sends a request to the server and waits for a response. Timeout is 10 seconds by default. Set to 0 to wait forever.
 * **`.ping(data:any) -> promise<integer>`** - Sends a ping request to the server.
-* **`.close(reason:any) -> promise<bool>`** - Finishes all pending jobs then closes the connection.
-* **`.destroy(reason:any) -> bool`** - Rejects all pending jobs and closes the connection.
+* **`.close(reason:any) -> promise<bool>`** - Finishes all pending jobs then closes the connection. Will not auto-reconnect.
+* **`.destroy(reason:any) -> bool`** - Rejects all pending jobs and closes the connection. Will not auto-reconnect.
 
 ### Client Properties
 

@@ -59,12 +59,15 @@ module.exports = {
 			});
 		});
 	},
-	async close(data) {
+	async close(data, allowReconnect = false) {
 		this._closed = true;
 		await Promise.allSettled(this._drainQueue);
 		const packet = this._pack({
 			t: MessageTypes.END,
-			d: data
+			d: {
+				m: data,
+				a: allowReconnect
+			}
 		});
 		await new Promise(ok => {
 			this.connection.end(packet, void 0, ok);
@@ -96,21 +99,6 @@ module.exports = {
 			return value;
 		};
 	},
-	/*
-	_read(d) {
-		const data = this.connection.zlib ? this.connection.zlib.inflate.process(d) : d;
-		this._buffer += data.toString();
-		let index = 0;
-		let next = 0;
-		while((next = this._buffer.indexOf(MessageDelimiter, index)) > -1) {
-			const json = JSON.parse(this._buffer.slice(index, next));
-			// const json = unpack(Buffer.from(this._buffer.slice(index, next), "base64"));
-			this._parse(json);
-			index = next + MessageDelimiter.length;
-		}
-		this._buffer = this._buffer.slice(index);
-	},
-	*/
 	_read(d) {
 		const data = this.connection.zlib ? this.connection.zlib.inflate.process(d) : d;
 		this._buffer += data.toString();

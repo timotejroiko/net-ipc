@@ -109,7 +109,7 @@ class Connection {
 			}
 			case MessageTypes.END: {
 				if(data.d) {
-					this._end = data.d;
+					this._end = data.d.m;
 				}
 				break;
 			}
