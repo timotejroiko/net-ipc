@@ -18,14 +18,14 @@ tcp.on("request", request2);
 
 const received = {};
 
-socket.on("connect", client => {
-	console.log(`\n[SOCKET SERVER] new connection received, assigned client id ${client.id}`);
+socket.on("connect", (client, payload) => {
+	console.log(`\n[SOCKET SERVER] new connection received, assigned client id ${client.id} and payload ${payload}`);
 	const id = `socket${client.connection.msgpack ? " messagepack" : ""}${client.connection.zlib ? " zlib" : ""}`;
 	if(!received[id]) { received[id] = 0; }
 	client.connection.on("data", d => { received[id] += d.toString().length; });
 });
-tcp.on("connect", client => {
-	console.log(`\n[TCP SERVER] new connection received, assigned client id ${client.id}`);
+tcp.on("connect", (client, payload) => {
+	console.log(`\n[TCP SERVER] new connection received, assigned client id ${client.id} and payload ${payload}`);
 	const id = `tcp${client.connection.msgpack ? " messagepack" : ""} ${client.connection.zlib ? " zlib" : ""}`;
 	if(!received[id]) { received[id] = 0; }
 	client.connection.on("data", d => { received[id] += d.toString().length; });

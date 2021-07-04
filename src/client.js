@@ -133,7 +133,7 @@ class Client extends Emitter {
 		const payload = {
 			compress: this.options.compress && Boolean(this._zlib),
 			messagepack: this.options.messagepack && Boolean(this._msgpack),
-			extras: this._promise.payload,
+			extras: this._payload,
 			id: this.id
 		};
 		this._write(MessageTypes.CONNECTION, payload).catch(e => {
