@@ -23,7 +23,7 @@ module.exports = class Server extends Emitter {
 		if(this.options.port && !Number.isInteger(this.options.port)) { throw new Error(ErrorMessages.BAD_PORT); }
 		if(this.options.path && typeof this.options.path !== "string") { throw new Error(ErrorMessages.BAD_PATH); }
 		if(this.options.path && process.platform === "win32") { this.options.path = `\\\\.\\pipe\\${this.options.path.replace(/^\//, "").replace(/\//g, "-")}`; }
-		if(!Number.isInteger(this.options.retries) || this.options.retries < 0) { this.options.retries = 3; }
+		this.options.retries = Number(this.options.retries) >= 0 ? Number(this.options.retries) : 3;
 	}
 	start() {
 		return new Promise((ok, nope) => {

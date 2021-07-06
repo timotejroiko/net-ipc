@@ -22,10 +22,10 @@ A simple message based IPC client/server providing bi-directional communication 
 const { Server } = require("net-ipc");
 
 const server = new Server({
-    port: 8333, // for TCP
-    // path: "mypath", // for sockets
-    // max: 100 // max number of clients (default unlimited)
-    // retries: 5 // number of retries in case of unnatural disconnections (default 3)
+    path: "mypath", // pathname for domain sockets (default "net-ipc")
+    // port: 8333, // start a TCP server instead of domain sockets
+    // max: 100 // max number of clients (default Infinity)
+    // retries: 5 // number of message retries in case of unnatural disconnections, time between retries is 500ms * retrynumber (default 3, min 0, max Infinity)
 });
 
 server.on("ready", url => {
@@ -36,7 +36,7 @@ server.on("error", console.error);
 
 server.on("connect", (client, data) => {
     console.log(`received new connection and assigned it the id ${client.id}`);
-    // initia payload can be used for authorizing
+    // initial payload can be used for authorizing
     console.log(`the connection sent an initial payload containing ${data}`);
     if(data !== "hi") {
         client.close("permission denied");
@@ -55,17 +55,19 @@ server.on("message", async (message, client) => {
 server.on("request", (req, res, client) => {
     // received when any client uses .request()
     console.log(`received request from client id ${client.id} containing ${req}`);
-    // reply to this request. client will receive "something" in the promise returned by .request()
+    // use the res() function to reply to this request
     // res is an async function, will reject if the reply fails
-    res("something").catch(console.error);
+    // if you dont reply, the client's request will wait until timeout
+    res("something").catch(console.error); // client will receive "something" in the promise returned by .request()
 });
 
-// send a message to all clients. each client will receive it in a message event
+// send a message to all clients. each client will receive it in a "message" event
 server.broadcast("hello everyone!");
 
-// send a request to all clients. each client will receive it in a request event
+// send a request to all clients. each client will receive it in a "request" event
 server.survey("survey").then(results => {
-    // returns an array of promise outcomes according to https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/allSettled
+    // returns an array of promise outcomes as per Promise.allSettled()
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/allSettled
 });
 
 // all connected clients are accessible in the server.connections array and can be independently interacted with
@@ -80,25 +82,26 @@ server.start().catch(console.error);
 const { Client } = require("net-ipc");
 
 const client = new Client({
-    url: "localhost:8333", // for TCP
-    // path: "mypath", // for sockets
-    // compress: true // enable zlib-stream compression (requires installing "fast-zlib")
-    // messagepack: true // enable messagepack serialization (requires installing "msgpackr")
-    // reconnect: true // auto-reconenct on unnatural disconnections (default true)
-    // retries: 5 // number of retries in case of unnatural disconnections (default 3)
+    path: "mypath", // pathname for domain sockets (default "net-ipc")
+    // url: "localhost:8333", // connect via TCP instead of domain sockets
+    // compress: true // enable zlib-stream compression (default false, requires installing "fast-zlib")
+    // messagepack: true // enable messagepack serialization (default false, requires installing "msgpackr")
+    // reconnect: false // auto-reconenct on unnatural disconnections (default true)
+    // retries: 5 // max number of message and connection retries in case of unnatural disconnections, time between retries is 500ms * retrynumber (default 3, min 1, max Infinity)
+    // maxRetryTime: 5000 // max amount of time to wait between retries in ms (default 10000, min 500, max Infinity)
 });
 
 client.on("ready", async data => {
     console.log(`established new connection, received id ${data.id} from server`);
 
     // send a message to the server
-    await client.send("execute broadcast").catch(console.error);
+    await client.send("hi").catch(console.error);
 
     // send a request to the server
     // will reject after a timeout if the server does not respond
     // will reject immediately if the server does not listen to the request event
     let response = await client.request("did you receive this?").catch(e => `oops: ${e}`);
-    console.log(response);
+    console.log(response); // "something"
 });
 
 client.on("message", message => {
@@ -109,7 +112,9 @@ client.on("message", message => {
 client.on("request", (req, res) => {
     // requests sent by the server via server.survey() or connection.request()
     console.log(`received request from server containing ${req}`);
+    // use the res() function to reply to this request
     // res is an async function, will reject if the reply fails
+    // if you dont reply, the server's request will wait until timeout
     res("response").catch(console.error);
 });
 

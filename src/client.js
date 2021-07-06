@@ -22,7 +22,8 @@ class Client extends Emitter {
 			compress: Boolean(options.compress),
 			messagepack: Boolean(options.messagepack),
 			reconnect: typeof options.reconnect !== "undefined" ? Boolean(options.reconnect) : true,
-			retries: Number.isInteger(options.retries) && options.retries > 0 ? options.retries : 3
+			retries: Number(options.retries) > 0 ? Number(options.retries) : 3,
+			maxRetryTime: Number(options.maxRetryTime) >= 500 ? Number(options.maxRetryTime) : 10000
 		};
 		this._error = null;
 		this._end = null;
@@ -103,7 +104,7 @@ class Client extends Emitter {
 						this.emit(Events.CLOSE, e);
 					});
 				}
-			}, 500 * ++this._retries);
+			}, Math.min(500 * ++this._retries, this.options.maxRetryTime));
 		} else {
 			this._setStatus(ClientStatus.IDLE);
 			this._retries = 0;
@@ -212,7 +213,7 @@ class Client extends Emitter {
 		} catch(e) {
 			if(this.options.reconnect && this.options.retries > r) {
 				const retries = r + 1;
-				await new Promise(resolve => { setTimeout(resolve, 500 * retries); });
+				await new Promise(resolve => { setTimeout(resolve, Math.min(500 * retries, this.options.maxRetryTime)); });
 				return this._tryWrite(op, data, nonce, retries);
 			}
 			return new Error(e);
