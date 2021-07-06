@@ -60,6 +60,7 @@ module.exports = {
 		});
 	},
 	async close(data, allowReconnect = false) {
+		if(this._closed || !this.connection) { return false; }
 		this._closed = true;
 		await Promise.allSettled(this._drainQueue);
 		const packet = this._pack({
@@ -75,6 +76,7 @@ module.exports = {
 		return true;
 	},
 	destroy(data) {
+		if(this._closed || !this.connection) { return false; }
 		this._closed = true;
 		for(let i = 0; i < this._drainQueue.length; i++) {
 			this._drainQueue.shift().reject(new Error(ErrorMessages.CONNECTION_DESTROYED));

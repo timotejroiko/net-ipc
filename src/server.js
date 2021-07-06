@@ -55,11 +55,11 @@ module.exports = class Server extends Emitter {
 			}
 		});
 	}
-	async close() {
+	async close(allowReconnect = false) {
 		if(this.server) {
 			this.server.close();
 			for(const client of this.connections) {
-				await client.close(ErrorMessages.SERVER_CLOSED);
+				await client.close(ErrorMessages.SERVER_CLOSED, allowReconnect);
 			}
 		}
 		return this;

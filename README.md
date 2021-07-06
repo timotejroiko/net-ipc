@@ -136,7 +136,7 @@ client.connect("hi").catch(console.error);
 ### Server Methods
 
 * **`.start() -> promise<Server>`** - Starts the server.
-* **`.close() -> promise<Server>`** - Gracefully disconnects all clients and closes the server.
+* **`.close(allowReconnect:bool) -> promise<Server>`** - Gracefully disconnects all clients and closes the server. If allowReconnect is true, clients will attempt to auto-reconnect for a few seconds (false by default).
 * **`.broadcast(data:any) -> promise<void>`** - Sends a message to all clients. Errors will be forwarded to the error event and wont reject the promise.
 * **`.survey(data:any, timeout?:integer) -> promise<object[]>`** - Sends a request to all clients and waits for them to respond. Returns an array of objects containing promise statuses and results. Timeout is 10 seconds by default. Set to 0 to wait forever.
 * **`.ping(data:any) -> promise<object[]>`** - Sends a ping request to all clients and waits for them to respond. Returns an array of objects containing the promise statuses and results.
@@ -156,7 +156,7 @@ client.connect("hi").catch(console.error);
 * **`.ping(data:any) -> promise<integer>`** - Sends a ping request to the corresponding client.
 * **`.pause() -> void`** - Pause receiving messages on this connection. Messages will be queued on the client side.
 * **`.resume() -> void`** - Resume receiving messages on this connection. Queued messages will be immediately emitted.
-* **`.close(reason:any, allowReconnect:bool) -> promise<bool>`** - Finishes all pending jobs then closes the connection. If allowReconnect is true, the client will attempt to auto-reconnect (false by default).
+* **`.close(reason:any, allowReconnect:bool) -> promise<bool>`** - Finishes all pending jobs then closes the connection. If allowReconnect is true, the client will attempt to auto-reconnect for a few seconds (false by default).
 * **`.destroy(reason:any) -> bool`** - Rejects all pending jobs and closes the connection. The client will attempt to auto-reconnect.
 
 ### Connection Properties
