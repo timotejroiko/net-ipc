@@ -1,6 +1,11 @@
 declare module "net-ipc" {
-	import EventEmitter from "events";
+	import { EventEmitter } from "events";
 	import { Socket as NetClient, Server as NetServer } from "net";
+	export type PromiseSettled = {
+		status: "fulfilled" | "rejected";
+		value?: any;
+		reason?: any;
+	}
 	export type ClientOptions = {
 		path?: string;
 		url?: string;
@@ -60,8 +65,8 @@ declare module "net-ipc" {
 		start(): Promise<this>;
 		close(allowReconnect?: boolean): Promise<this>;
 		broadcast(data: any): Promise<void>;
-		survey(data: any, timeout?: number): Promise<PromiseSettledResult<any>>;
-		ping(data?: any): Promise<PromiseSettledResult<number>>;
+		survey(data: any, timeout?: number): Promise<PromiseSettled>;
+		ping(data?: any): Promise<PromiseSettled>;
 		pause(): void;
 		resume(): void;
 		connections: Connection[];
