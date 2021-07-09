@@ -20,7 +20,7 @@ const received = {};
 
 socket.on("connect", (client, payload) => {
 	console.log(`\n[SOCKET SERVER] new connection received, assigned client id ${client.id} and payload ${payload}`);
-	const id = `socket${client.connection.msgpack ? " messagepack" : ""}${client.connection.zlib ? " zlib" : ""}`;
+	const id = `socket${client.connection.msgpack ? " messagepack" : ""} ${client.connection.zlib ? " zlib" : ""}`;
 	if(!received[id]) { received[id] = 0; }
 	client.connection.on("data", d => { received[id] += d.toString().length; });
 });

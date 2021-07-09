@@ -1,6 +1,6 @@
 "use strict";
 
-const { Events, ConnectionEvents, MessageTypes, ErrorMessages } = require("./constants.js");
+const { Events, ConnectionEvents, MessageTypes, ErrorMessages, Options } = require("./constants.js");
 const interfaces = require("./interfaces.js");
 
 class Connection {
@@ -123,7 +123,7 @@ class Connection {
 		} catch(e) {
 			if(this._retries && this._retries > r) {
 				for(let i = r; i < this._retries; i++) {
-					await new Promise(resolve => { setTimeout(resolve, 500 * (i + 1)); });
+					await new Promise(resolve => { setTimeout(resolve, Options.RETRY_INCREMENT * (i + 1)); });
 					const connection = this.server.connections.find(c => c.id === this.id);
 					if(connection) { return connection._tryWrite(op, data, nonce, i); }
 				}

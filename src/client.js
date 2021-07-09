@@ -19,19 +19,21 @@ class Client extends Emitter {
 		this.id = null;
 		this.status = ClientStatus.IDLE;
 		this.options = {
+			path: options.path,
+			url: options.url,
 			compress: Boolean(options.compress),
 			messagepack: Boolean(options.messagepack),
 			reconnect: typeof options.reconnect !== "undefined" ? Boolean(options.reconnect) : true,
-			retries: Number(options.retries) > 0 ? Number(options.retries) : 3,
-			maxRetryTime: Number(options.maxRetryTime) >= 500 ? Number(options.maxRetryTime) : 10000
+			retries: Number(options.retries) > 0 ? Number(options.retries) : Options.DEFAULT_RETRIES,
+			maxRetryTime: Number(options.maxRetryTime) >= Options.RETRY_INCREMENT ? Number(options.maxRetryTime) : Options.DEFAULT_MAXRETRYTIME
 		};
 		this._error = null;
 		this._end = null;
 		this._promise = null;
 		this._retries = 0;
 		this._payload = null;
-		this._url = options.url || null;
-		this._path = options.path || (options.url ? null : Options.DEFAULT_PATH);
+		this._url = this.options.url || null;
+		this._path = this.options.path || (this.options.url ? null : Options.DEFAULT_PATH);
 		if(this._url && typeof this._url !== "string") { throw new Error(ErrorMessages.BAD_URL); }
 		if(this._path && typeof this._path !== "string") { throw new Error(ErrorMessages.BAD_PATH); }
 		if(this._path && process.platform === "win32") { this._path = `\\\\.\\pipe\\${this._path.replace(/^\//, "").replace(/\//g, "-")}`; }
@@ -104,7 +106,7 @@ class Client extends Emitter {
 						this.emit(Events.CLOSE, e);
 					});
 				}
-			}, Math.min(500 * ++this._retries, this.options.maxRetryTime));
+			}, Math.min(Options.RETRY_INCREMENT * ++this._retries, this.options.maxRetryTime));
 		} else {
 			this._setStatus(ClientStatus.IDLE);
 			this._retries = 0;
@@ -213,7 +215,7 @@ class Client extends Emitter {
 		} catch(e) {
 			if(this.options.reconnect && this.options.retries > r) {
 				const retries = r + 1;
-				await new Promise(resolve => { setTimeout(resolve, Math.min(500 * retries, this.options.maxRetryTime)); });
+				await new Promise(resolve => { setTimeout(resolve, Math.min(Options.RETRY_INCREMENT * retries, this.options.maxRetryTime)); });
 				return this._tryWrite(op, data, nonce, retries);
 			}
 			return new Error(e);

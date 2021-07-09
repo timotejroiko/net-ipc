@@ -23,7 +23,7 @@ module.exports = class Server extends Emitter {
 		if(this.options.port && !Number.isInteger(this.options.port)) { throw new Error(ErrorMessages.BAD_PORT); }
 		if(this.options.path && typeof this.options.path !== "string") { throw new Error(ErrorMessages.BAD_PATH); }
 		if(this.options.path && process.platform === "win32") { this.options.path = `\\\\.\\pipe\\${this.options.path.replace(/^\//, "").replace(/\//g, "-")}`; }
-		this.options.retries = Number(this.options.retries) >= 0 ? Number(this.options.retries) : 3;
+		this.options.retries = Number(this.options.retries) >= 0 ? Number(this.options.retries) : Options.DEFAULT_RETRIES;
 	}
 	start() {
 		return new Promise((ok, nope) => {
@@ -69,7 +69,7 @@ module.exports = class Server extends Emitter {
 			await c.send(data).catch(e => this.emit(Events.ERROR, e));
 		}
 	}
-	survey(data, timeout = 10000) {
+	survey(data, timeout = Options.DEFAULT_TIMEOUT) {
 		if(!Number.isInteger(timeout)) { return Promise.reject(ErrorMessages.BAD_TIMEOUT); }
 		return Promise.allSettled(this.connections.map(c => c.request(data, timeout)));
 	}
@@ -105,7 +105,7 @@ module.exports = class Server extends Emitter {
 		const client = new Connection(socket, this);
 		const timer = setTimeout(() => {
 			client.close();
-		}, 10000);
+		}, Options.DEFAULT_CONNECTIONTIMEOUT);
 		client.connection.once(ConnectionEvents.READY, extras => {
 			clearTimeout(timer);
 			client.connectedAt = Date.now();
