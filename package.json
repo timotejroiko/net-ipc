@@ -1,6 +1,6 @@
 {
 	"name": "net-ipc",
-	"version": "1.2.1",
+	"version": "1.2.2",
 	"description": "Simple message based IPC client/server providing bi-directional communication over sockets and TCP. Supports one-way messages, promise-based request-response, survey, broadcast and zlib-stream compression",
 	"main": "index.js",
 	"typings": "index.d.ts",
