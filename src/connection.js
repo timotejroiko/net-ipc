@@ -8,6 +8,7 @@ class Connection {
 		this.server = server;
 		this.id = this._nonce();
 		this.connection = socket;
+		this.connection._buffer = Buffer.allocUnsafe(0);
 		this.connection.on(ConnectionEvents.ERROR, this._onerror.bind(this));
 		this.connection.on(ConnectionEvents.CLOSE, this._onclose.bind(this));
 		this.connection.on(ConnectionEvents.DATA, this._read.bind(this));

@@ -70,9 +70,9 @@ console.log("clients started");
 async function messageTest(client, test) {
 	console.log(`[CLIENT] starting ${test} test`);
 	console.log("[CLIENT] generating random data");
-	const data = new Array(99999).fill().map(() => randomObject(5));
+	const data = new Array(9999).fill().map(() => randomObject(10));
 	console.log("[CLIENT] sending data");
-	client.send({ test: `${data.length} random strings` });
+	client.send({ test: `${data.length} random objects` });
 	let timer = Date.now();
 	for(const d of data) {
 		/*
@@ -85,7 +85,7 @@ async function messageTest(client, test) {
 	}
 	console.log(`[CLIENT] sent ${data.length} messages in ${Date.now() - timer}ms`);
 	client.send({ done: true });
-	return new Promise(r => {
+	return new Promise((r, j) => {
 		const received = [];
 		timer = Date.now();
 		client.on("message", m => {
@@ -94,7 +94,7 @@ async function messageTest(client, test) {
 				console.log(`[CLIENT] received ${received.length} messages in ${Date.now() - timer}ms`);
 				console.log("[CLIENT] verifying data integrity");
 				for(let i = 0; i < data.length; i++) {
-					if(JSON.stringify(data[i]) !== JSON.stringify(received[i])) { throw new Error("invalid data received", data[i], received[i]); }
+					if(JSON.stringify(data[i]) !== JSON.stringify(received[i])) { return j(new Error("invalid data received", data[i], received[i])); }
 				}
 				console.log("[CLIENT] no errors found\n");
 				r();
@@ -106,7 +106,7 @@ async function messageTest(client, test) {
 async function requestTest(client, test) {
 	console.log(`[CLIENT] starting ${test} test`);
 	console.log("[CLIENT] generating random data");
-	const data = new Array(10000).fill().map(() => randomObject(5));
+	const data = new Array(1000).fill().map(() => randomObject(10));
 	console.log(`[CLIENT] sending ${data.length} requests`);
 	const times = [];
 	const total = Date.now();
@@ -128,7 +128,8 @@ async function requestTest(client, test) {
 function randomObject(keys) {
 	const obj = {};
 	for(let i = 0; i < keys; i++) {
-		obj[Math.random().toString(36)] = Math.random().toString(36).repeat(Math.ceil(Math.random() * keys));
+		const multibyte = String.fromCharCode(Math.ceil(Math.random() * (2 ** 15)));
+		obj[Math.random().toString(36)] = Array(keys).fill().map(() => String.fromCharCode(Math.ceil(Math.random() * (2 ** 7)))).join("") + multibyte;
 	}
 	return obj;
 }

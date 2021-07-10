@@ -96,7 +96,8 @@ module.exports = {
 					return `[Circular ${value.constructor.name}]`;
 				}
 				seen.add(value);
-			} else if(typeof value === "bigint") {
+			}
+			if(typeof value === "bigint") {
 				return value.toString();
 			}
 			return value;
@@ -104,16 +105,13 @@ module.exports = {
 	},
 	_read(d) {
 		const data = this.connection.zlib ? this.connection.zlib.inflate.process(d) : d;
-		this._buffer += data.toString("binary");
-		while(this._buffer.length) {
-			const tag = this._untag(this._buffer);
-			const start = tag[0];
-			const end = start + tag[1];
-			if(!tag[2] || this._buffer.length < end) { return; }
-			const slice = this._buffer.slice(start, end);
-			this._buffer = this._buffer.slice(end);
+		this.connection._buffer = Buffer.concat([this.connection._buffer, data]);
+		let tag;
+		while((tag = this._untag(this.connection._buffer))[2] && this.connection._buffer.length >= tag[1]) {
+			const slice = this.connection._buffer.slice(tag[0], tag[1]);
+			this.connection._buffer = this.connection._buffer.slice(tag[1]);
 			try {
-				const json = this.connection.msgpack ? this.connection.msgpack.unpack(Buffer.from(slice, "binary")) : JSON.parse(slice);
+				const json = this.connection.msgpack ? this.connection.msgpack.unpack(slice) : JSON.parse(slice);
 				this._parse(json);
 			} catch(e) {
 				this.connection.emit(ConnectionEvents.ERROR, e);
@@ -131,7 +129,7 @@ module.exports = {
 			};
 			if(nonce) { d.n = nonce; }
 			const packet = this._pack(d);
-			const sent = this.connection.write(packet, "binary");
+			const sent = this.connection.write(packet);
 			if(sent) { return Promise.resolve(); }
 			let resolve;
 			let reject;
@@ -149,26 +147,22 @@ module.exports = {
 		}
 	},
 	_pack(data) {
-		let packet;
-		if(this.connection.msgpack) {
-			packet = this.connection.msgpack.pack(data).toString("binary");
-		} else {
-			packet = JSON.stringify(data, this._replacer());
+		const msg = this.connection.msgpack ? this.connection.msgpack.pack(data) : Buffer.from(JSON.stringify(data, this._replacer()));
+		const tag = this._tag(msg.length);
+		const packet = Buffer.allocUnsafe(msg.length + tag.length);
+		for(let i = 0; i < tag.length; i++) {
+			packet[i] = tag[i];
 		}
-		const tag = this._tag(packet.length);
-		packet = tag + packet;
-		if(this.connection.zlib) {
-			packet = this.connection.zlib.deflate.process(Buffer.from(packet, "binary"));
-		}
-		return packet;
+		packet.set(msg, tag.length);
+		return this.connection.zlib ? this.connection.zlib.deflate.process(packet) : packet;
 	},
 	_tag(_size) {
 		let size = _size;
-		let tag = String.fromCharCode((size & 127) + 128);
+		const tag = [(size & 127) + 128];
 		while((size >>= 7)) {
-			tag = String.fromCharCode(size & 127) + tag;
+			tag.push(size & 127);
 		}
-		return tag;
+		return tag.reverse();
 	},
 	_untag(data) {
 		let size = 0;
@@ -176,13 +170,13 @@ module.exports = {
 		let done = 0;
 		while(size < data.length) {
 			datasize <<= 7;
-			datasize += data.charCodeAt(size) & 127;
-			if(data.charCodeAt(size++) > 127) {
+			datasize += data[size] & 127;
+			if(data[size++] > 127) {
 				done = 1;
 				break;
 			}
 		}
-		return [size, datasize, done];
+		return [size, size + datasize, done];
 	},
 	_drain() {
 		for(let i = 0; i < this._drainQueue.length; i++) {

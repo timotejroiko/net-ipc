@@ -50,6 +50,7 @@ class Client extends Emitter {
 			};
 			this._payload = data;
 			this.connection = new Socket();
+			this.connection._buffer = Buffer.allocUnsafe(0);
 			this.connection.setKeepAlive(true);
 			this.connection.on(ConnectionEvents.ERROR, this._onerror.bind(this));
 			this.connection.on(ConnectionEvents.CLOSE, this._onclose.bind(this));
