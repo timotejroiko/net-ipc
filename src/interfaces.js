@@ -104,17 +104,16 @@ module.exports = {
 	},
 	_read(d) {
 		const data = this.connection.zlib ? this.connection.zlib.inflate.process(d) : d;
-		this._buffer += data.toString();
+		this._buffer += data.toString("binary");
 		while(this._buffer.length) {
-			const buffer = this._buffer;
-			const tag = this._untag(buffer);
+			const tag = this._untag(this._buffer);
 			const start = tag[0];
 			const end = start + tag[1];
-			if(buffer.length < end) { return; }
-			const slice = buffer.slice(start, end);
-			this._buffer = buffer.slice(end);
+			if(!tag[2] || this._buffer.length < end) { return; }
+			const slice = this._buffer.slice(start, end);
+			this._buffer = this._buffer.slice(end);
 			try {
-				const json = this.connection.msgpack ? this.connection.msgpack.unpack(Buffer.from(slice, "latin1")) : JSON.parse(slice);
+				const json = this.connection.msgpack ? this.connection.msgpack.unpack(Buffer.from(slice, "binary")) : JSON.parse(slice);
 				this._parse(json);
 			} catch(e) {
 				this.connection.emit(ConnectionEvents.ERROR, e);
@@ -132,7 +131,7 @@ module.exports = {
 			};
 			if(nonce) { d.n = nonce; }
 			const packet = this._pack(d);
-			const sent = this.connection.write(packet);
+			const sent = this.connection.write(packet, "binary");
 			if(sent) { return Promise.resolve(); }
 			let resolve;
 			let reject;
@@ -152,34 +151,38 @@ module.exports = {
 	_pack(data) {
 		let packet;
 		if(this.connection.msgpack) {
-			packet = this.connection.msgpack.pack(data).toString("latin1");
+			packet = this.connection.msgpack.pack(data).toString("binary");
 		} else {
 			packet = JSON.stringify(data, this._replacer());
 		}
-		packet = this._tag(packet.length) + packet;
+		const tag = this._tag(packet.length);
+		packet = tag + packet;
 		if(this.connection.zlib) {
-			packet = this.connection.zlib.deflate.process(packet);
+			packet = this.connection.zlib.deflate.process(Buffer.from(packet, "binary"));
 		}
 		return packet;
 	},
 	_tag(_size) {
 		let size = _size;
-		let tag = "";
-		while(size > 127) {
-			tag += String.fromCharCode(size & 127);
-			size >>= 7;
+		let tag = String.fromCharCode((size & 127) + 128);
+		while((size >>= 7)) {
+			tag = String.fromCharCode(size & 127) + tag;
 		}
-		return tag + String.fromCharCode(size + 128);
+		return tag;
 	},
 	_untag(data) {
 		let size = 0;
 		let datasize = 0;
-		while(size < 5) {
+		let done = 0;
+		while(size < data.length) {
 			datasize <<= 7;
 			datasize += data.charCodeAt(size) & 127;
-			if(data.charCodeAt(size++) > 127) { break; }
+			if(data.charCodeAt(size++) > 127) {
+				done = 1;
+				break;
+			}
 		}
-		return [size, datasize];
+		return [size, datasize, done];
 	},
 	_drain() {
 		for(let i = 0; i < this._drainQueue.length; i++) {

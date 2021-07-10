@@ -10,11 +10,8 @@ console.log("[TCP SERVER] starting");
 const tcp = new Server({ port: 8333 });
 tcp.start();
 
-socket.on("message", message1);
-tcp.on("message", message2);
-
-socket.on("request", request1);
-tcp.on("request", request2);
+socket.on("message", message1).on("request", request1);
+tcp.on("message", message2).on("request", request2);
 
 const received = {};
 
@@ -34,8 +31,8 @@ tcp.on("connect", (client, payload) => {
 socket.on("disconnect", c => console.log("disconnected", c.id));
 tcp.on("disconnect", c => console.log("disconnected", c.id));
 
-// socket.on("error", e => console.log("error",e.message));
-// tcp.on("error", e => console.log("error",e.message));
+socket.on("error", e => console.log("error", e.message));
+tcp.on("error", e => console.log("error", e.message));
 
 let timer;
 let data = [];

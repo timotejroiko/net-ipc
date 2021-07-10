@@ -29,6 +29,7 @@ const c444 = new Client({
 console.log("clients started");
 
 (async () => {
+
 	const c01 = await c1.connect("test1");
 	await messageTest(c01, "socket");
 	await requestTest(c01, "socket request");
@@ -69,7 +70,7 @@ console.log("clients started");
 async function messageTest(client, test) {
 	console.log(`[CLIENT] starting ${test} test`);
 	console.log("[CLIENT] generating random data");
-	const data = new Array(99999).fill().map(() => Math.random().toString(36));
+	const data = new Array(99999).fill().map(() => randomObject(5));
 	console.log("[CLIENT] sending data");
 	client.send({ test: `${data.length} random strings` });
 	let timer = Date.now();
@@ -93,7 +94,7 @@ async function messageTest(client, test) {
 				console.log(`[CLIENT] received ${received.length} messages in ${Date.now() - timer}ms`);
 				console.log("[CLIENT] verifying data integrity");
 				for(let i = 0; i < data.length; i++) {
-					if(data[i] !== received[i]) { throw new Error("invalid data received"); }
+					if(JSON.stringify(data[i]) !== JSON.stringify(received[i])) { throw new Error("invalid data received", data[i], received[i]); }
 				}
 				console.log("[CLIENT] no errors found\n");
 				r();
@@ -105,7 +106,7 @@ async function messageTest(client, test) {
 async function requestTest(client, test) {
 	console.log(`[CLIENT] starting ${test} test`);
 	console.log("[CLIENT] generating random data");
-	const data = new Array(10000).fill().map(() => Math.random().toString(36) + Math.random().toString(36) + Math.random().toString(36));
+	const data = new Array(10000).fill().map(() => randomObject(5));
 	console.log(`[CLIENT] sending ${data.length} requests`);
 	const times = [];
 	const total = Date.now();
@@ -119,7 +120,15 @@ async function requestTest(client, test) {
 	console.log(`[CLIENT] finished in ${Date.now() - total}ms, average response time of ${times.reduce((a, b) => a + b, 0) / times.length}ms`);
 	console.log("[CLIENT] verifying data integrity");
 	for(let i = 0; i < data.length; i++) {
-		if(data[i] !== results[i]) { throw new Error("invalid data received"); }
+		if(JSON.stringify(data[i]) !== JSON.stringify(results[i])) { throw new Error("invalid data received", data[i], results[i]); }
 	}
 	console.log("[CLIENT] no errors found\n");
+}
+
+function randomObject(keys) {
+	const obj = {};
+	for(let i = 0; i < keys; i++) {
+		obj[Math.random().toString(36)] = Math.random().toString(36).repeat(Math.ceil(Math.random() * keys));
+	}
+	return obj;
 }
