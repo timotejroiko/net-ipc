@@ -103,18 +103,20 @@ module.exports = {
 			return value;
 		};
 	},
-	_read(d) {
-		const data = this.connection.zlib ? this.connection.zlib.inflate.process(d) : d;
-		this.connection._buffer = Buffer.concat([this.connection._buffer, data]);
-		let tag;
-		while((tag = this._untag(this.connection._buffer))[2] && this.connection._buffer.length >= tag[1]) {
-			const slice = this.connection._buffer.slice(tag[0], tag[1]);
-			this.connection._buffer = this.connection._buffer.slice(tag[1]);
+	_read() {
+		const socket = this.connection;
+		while(socket.readableLength > 1) {
+			const length = this._untag();
+			if(!length) { return; }
+			let data = socket.read(length[0] + length[1]);
+			if(!data) { return; }
+			data = data.slice(length[0]);
 			try {
-				const json = this.connection.msgpack ? this.connection.msgpack.unpack(slice) : JSON.parse(slice);
+				if(socket.zlib) { data = socket.zlib.inflate.process(data); }
+				const json = socket.msgpack ? socket.msgpack.unpack(data) : JSON.parse(data);
 				this._parse(json);
 			} catch(e) {
-				this.connection.emit(ConnectionEvents.ERROR, e);
+				socket.emit(ConnectionEvents.ERROR, e);
 			}
 		}
 	},
@@ -147,14 +149,16 @@ module.exports = {
 		}
 	},
 	_pack(data) {
-		const msg = this.connection.msgpack ? this.connection.msgpack.pack(data) : Buffer.from(JSON.stringify(data, this._replacer()));
+		const socket = this.connection;
+		let msg = socket.msgpack ? socket.msgpack.pack(data) : Buffer.from(JSON.stringify(data, this._replacer()));
+		if(socket.zlib) { msg = socket.zlib.deflate.process(msg); }
 		const tag = this._tag(msg.length);
 		const packet = Buffer.allocUnsafe(msg.length + tag.length);
 		for(let i = 0; i < tag.length; i++) {
 			packet[i] = tag[i];
 		}
 		packet.set(msg, tag.length);
-		return this.connection.zlib ? this.connection.zlib.deflate.process(packet) : packet;
+		return packet;
 	},
 	_tag(_size) {
 		let size = _size;
@@ -164,19 +168,22 @@ module.exports = {
 		}
 		return tag.reverse();
 	},
-	_untag(data) {
+	_untag() {
+		let head = this.connection._readableState.buffer.head;
+		let num = 0;
 		let size = 0;
-		let datasize = 0;
-		let done = 0;
-		while(size < data.length) {
-			datasize <<= 7;
-			datasize += data[size] & 127;
-			if(data[size++] > 127) {
-				done = 1;
-				break;
+		do {
+			for(let i = 0; i < head.data.length; i++) {
+				const byte = head.data[i];
+				num *= 128;
+				size++;
+				if(byte > 127) {
+					return [size, num + (byte & 127)];
+				}
+				num += byte;
 			}
-		}
-		return [size, size + datasize, done];
+		} while((head = head.next));
+		return false;
 	},
 	_drain() {
 		for(let i = 0; i < this._drainQueue.length; i++) {

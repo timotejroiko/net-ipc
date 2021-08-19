@@ -43,7 +43,7 @@ module.exports = {
 	ConnectionEvents: {
 		ERROR: "error",
 		CLOSE: "close",
-		DATA: "data",
+		DATA: "readable",
 		READY: "ready",
 		DONE: "done",
 		DRAIN: "drain"
