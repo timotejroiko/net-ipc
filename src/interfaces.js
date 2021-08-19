@@ -192,7 +192,6 @@ module.exports = {
 	},
 	_drainQueue: [],
 	_requests: {},
-	_buffer: "",
 	_zlib,
 	_msgpack
 };
