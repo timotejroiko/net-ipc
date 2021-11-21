@@ -17,7 +17,7 @@ module.exports = {
 		BAD_CONNECTIONS: "invalid max number of connections",
 		BAD_PORT: "invalid TCP port",
 		BAD_PATH: "invalid socket path",
-		BAD_URL: "invalid URL",
+		BAD_URL: "invalid host address",
 		SERVER_EXISTS: "server already exists",
 		EADDRINUSE: "EADDRINUSE: address already in use",
 		ORPHAN_CONNECTION: "closing orphaned connection",
@@ -68,6 +68,7 @@ module.exports = {
 		DEFAULT_MAXRETRYTIME: 10000,
 		DEFAULT_TIMEOUT: 10000,
 		DEFAULT_CONNECTIONTIMEOUT: 10000,
-		RETRY_INCREMENT: 500
+		RETRY_INCREMENT: 500,
+		DEFAULT_PORT: 3333
 	}
 };

@@ -1,6 +1,7 @@
 "use strict";
 
-const { Socket } = require("net");
+const net = require("net");
+const tls = require("tls");
 const Emitter = require("events");
 const interfaces = require("./interfaces.js");
 const {
@@ -20,7 +21,10 @@ class Client extends Emitter {
 		this.status = ClientStatus.IDLE;
 		this.options = {
 			path: options.path,
-			url: options.url,
+			host: options.host,
+			port: options.port,
+			handshake: Boolean(options.handshake),
+			secure: Boolean(options.secure),
 			compress: Boolean(options.compress),
 			messagepack: Boolean(options.messagepack),
 			reconnect: typeof options.reconnect !== "undefined" ? Boolean(options.reconnect) : true,
@@ -32,11 +36,11 @@ class Client extends Emitter {
 		this._promise = null;
 		this._retries = 0;
 		this._payload = null;
-		this._url = this.options.url || null;
-		this._path = this.options.path || (this.options.url ? null : Options.DEFAULT_PATH);
-		if(this._url && typeof this._url !== "string") { throw new Error(ErrorMessages.BAD_URL); }
-		if(this._path && typeof this._path !== "string") { throw new Error(ErrorMessages.BAD_PATH); }
-		if(this._path && process.platform === "win32") { this._path = `\\\\.\\pipe\\${this._path.replace(/^\//, "").replace(/\//g, "-")}`; }
+		if(!this.options.path && !this.options.host) { this.options.path = Options.DEFAULT_PATH; }
+		if(this.options.host && !this.options.port) { this.options.port = Options.DEFAULT_PORT; }
+		if(this.options.host && typeof this.options.host !== "string") { throw new Error(ErrorMessages.BAD_URL); }
+		if(this.options.path && typeof this.options.path !== "string") { throw new Error(ErrorMessages.BAD_PATH); }
+		if(this.options.path && process.platform === "win32") { this.options.path = `\\\\.\\pipe\\${this.options.path.replace(/^\//, "").replace(/\//g, "-")}`; }
 	}
 	connect(data) {
 		return new Promise((ok, nope) => {
@@ -49,26 +53,19 @@ class Client extends Emitter {
 				reject: nope
 			};
 			this._payload = data;
-			this.connection = new Socket();
+			this._setStatus(ClientStatus.CONNECTING);
+			const options = this.options.path ? { path: this.options.path } : { host: this.options.host, port: this.options.port };
+			if(this.options.secure) {
+				options.servername = options.host;
+				this.connection = tls.connect(options);
+			} else {
+				this.connection = net.connect(options);
+			}
 			this.connection.setKeepAlive(true);
 			this.connection.on(ConnectionEvents.ERROR, this._onerror.bind(this));
 			this.connection.on(ConnectionEvents.CLOSE, this._onclose.bind(this));
 			this.connection.once(ConnectionEvents.READY, this._ready.bind(this));
-			this._connect();
 		});
-	}
-	_connect() {
-		this._setStatus(ClientStatus.CONNECTING);
-		if(this._path) {
-			this.connection.connect({ path: this._path });
-		} else if(this._url) {
-			const url = this._url.split(":");
-			const port = url.pop();
-			this.connection.connect({
-				host: url.join(":"),
-				port: port
-			});
-		}
 	}
 	_onerror(e) {
 		this._error = e;
@@ -115,6 +112,27 @@ class Client extends Emitter {
 	}
 	_ready() {
 		this._setStatus(ClientStatus.CONNECTED);
+		if(this.options.handshake) {
+			const host = this.options.host;
+			const data = Buffer.from(`GET / HTTP/1.1\r\nHost: ${host}\r\nConnection: Upgrade\r\nUpgrade: net-ipc\r\n\r\n`);
+			const response = Buffer.from("HTTP/1.1 101 Switching Protocols\r\nConnection: Upgrade\r\nUpgrade: net-ipc\r\n\r\n;");
+			this.connection.write(data);
+			this.connection.on(ConnectionEvents.DATA, () => {
+				const buffer = this.connection.read(response.length);
+				if(!buffer) { return; }
+				if(!buffer.equals(response)) {
+					const str = buffer.toString();
+					this._error = str.slice(0, str.indexOf("\r\n"));
+					this.connection.destroy();
+				}
+				this.connection.removeAllListeners(ConnectionEvents.DATA);
+				this._init();
+			});
+		} else {
+			this._init();
+		}
+	}
+	_init() {
 		this.connection.on(ConnectionEvents.DATA, this._read.bind(this));
 		this.connection.on(ConnectionEvents.DRAIN, this._drain.bind(this));
 		this.connection.once(ConnectionEvents.DONE, extras => {

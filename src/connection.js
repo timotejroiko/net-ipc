@@ -10,7 +10,7 @@ class Connection {
 		this.connection = socket;
 		this.connection.on(ConnectionEvents.ERROR, this._onerror.bind(this));
 		this.connection.on(ConnectionEvents.CLOSE, this._onclose.bind(this));
-		this.connection.on(ConnectionEvents.DATA, this._read.bind(this));
+		this.connection.on(ConnectionEvents.DATA, this._init.bind(this));
 		this.connection.on(ConnectionEvents.DRAIN, this._drain.bind(this));
 		this._error = null;
 		this._end = null;
@@ -22,6 +22,37 @@ class Connection {
 	}
 	resume() {
 		this.connection.resume();
+	}
+	_init() {
+		const socket = this.connection;
+		const test = socket.read(3);
+		if(!test) { return; }
+		if(test.toString() === "GET") {
+			const CRLF = Buffer.from("\r\n\r\n");
+			let head = socket._readableState.buffer.head;
+			let buff = Buffer.allocUnsafe(0);
+			do {
+				buff = Buffer.concat([buff, head.data]);
+				const index = buff.indexOf(CRLF);
+				if(index > -1) {
+					const headers = socket.read(index + 4);
+					if(!headers) { continue; }
+					const str = headers.toString();
+					if(str.includes("Connection: Upgrade") && str.includes("Upgrade: net-ipc")) {
+						socket.write("HTTP/1.1 101 Switching Protocols\r\nConnection: Upgrade\r\nUpgrade: net-ipc\r\n\r\n");
+						socket._events[ConnectionEvents.DATA] = this._read.bind(this);
+						this._read();
+						return;
+					} else {
+						socket.end("HTTP/1.1 418 I'm a Teapot");
+					}
+				}
+			} while((head = head.next));
+		} else {
+			socket.unshift(test);
+			socket._events[ConnectionEvents.DATA] = this._read.bind(this);
+			this._read();
+		}
 	}
 	_onerror(e) {
 		this._error = e;
