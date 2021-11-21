@@ -113,21 +113,34 @@ class Client extends Emitter {
 	_ready() {
 		this._setStatus(ClientStatus.CONNECTED);
 		if(this.options.handshake) {
+			const socket = this.connection;
 			const host = this.options.host;
 			const data = Buffer.from(`GET / HTTP/1.1\r\nHost: ${host}\r\nConnection: Upgrade\r\nUpgrade: net-ipc\r\n\r\n`);
-			const response = Buffer.from("HTTP/1.1 101 Switching Protocols\r\nConnection: Upgrade\r\nUpgrade: net-ipc\r\n\r\n;");
-			this.connection.write(data);
-			this.connection.on(ConnectionEvents.DATA, () => {
-				const buffer = this.connection.read(response.length);
-				if(!buffer) { return; }
-				if(!buffer.equals(response)) {
-					const str = buffer.toString();
+			socket.on(ConnectionEvents.DATA, () => {
+				const test = socket.read(32);
+				if(!test) { return; }
+				if(test.toString() === "HTTP/1.1 101 Switching Protocols") {
+					const CRLF = Buffer.from("\r\n\r\n");
+					let head = socket._readableState.buffer.head;
+					let buff = Buffer.allocUnsafe(0);
+					do {
+						buff = Buffer.concat([buff, head.data]);
+						const index = buff.indexOf(CRLF);
+						if(index > -1) {
+							const headers = socket.read(index + 4);
+							if(!headers) { continue; }
+							this.connection.removeAllListeners(ConnectionEvents.DATA);
+							this._init();
+							return;
+						}
+					} while((head = head.next));
+				} else {
+					const str = test.toString();
 					this._error = str.slice(0, str.indexOf("\r\n"));
 					this.connection.destroy();
 				}
-				this.connection.removeAllListeners(ConnectionEvents.DATA);
-				this._init();
 			});
+			socket.write(data);
 		} else {
 			this._init();
 		}
