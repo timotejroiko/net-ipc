@@ -10,8 +10,13 @@ console.log("[TCP SERVER] starting");
 const tcp = new Server({ port: 8333 });
 tcp.start();
 
+console.log("[TLS SERVER] starting");
+const tls = new Server({ port: 8334, tls: true, options: { pskCallback: () => Buffer.from("test") } });
+tls.start();
+
 socket.on("message", message1).on("request", request1);
 tcp.on("message", message2).on("request", request2);
+tls.on("message", message2).on("request", request2);
 
 const received = {};
 
@@ -27,12 +32,20 @@ tcp.on("connect", (client, payload) => {
 	if(!received[id]) { received[id] = 0; }
 	client.connection.on("data", d => { received[id] += d.toString().length; });
 });
+tls.on("connect", (client, payload) => {
+	console.log(`\n[TCP SERVER] new connection received, assigned client id ${client.id} and payload ${payload}`);
+	const id = `tls${client.connection.msgpack ? " messagepack" : ""} ${client.connection.zlib ? " zlib" : ""}`;
+	if(!received[id]) { received[id] = 0; }
+	client.connection.on("data", d => { received[id] += d.toString().length; });
+});
 
 socket.on("disconnect", c => console.log("disconnected", c.id));
 tcp.on("disconnect", c => console.log("disconnected", c.id));
+tls.on("disconnect", c => console.log("disconnected", c.id));
 
 socket.on("error", e => console.log("error", e.message));
 tcp.on("error", e => console.log("error", e.message));
+tls.on("error", e => console.log("error", e.message));
 
 let timer;
 let data = [];

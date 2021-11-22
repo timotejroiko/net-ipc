@@ -23,8 +23,9 @@ class Client extends Emitter {
 			path: options.path,
 			host: options.host,
 			port: options.port,
+			options: options.options || {},
+			tls: Boolean(options.tls),
 			handshake: Boolean(options.handshake),
-			secure: Boolean(options.secure),
 			compress: Boolean(options.compress),
 			messagepack: Boolean(options.messagepack),
 			reconnect: typeof options.reconnect !== "undefined" ? Boolean(options.reconnect) : true,
@@ -36,6 +37,7 @@ class Client extends Emitter {
 		this._promise = null;
 		this._retries = 0;
 		this._payload = null;
+		if(typeof this.options.options !== "object") { throw new Error(ErrorMessages.BAD_OPTIONS); }
 		if(!this.options.path && !this.options.host) { this.options.path = Options.DEFAULT_PATH; }
 		if(this.options.host && !this.options.port) { this.options.port = Options.DEFAULT_PORT; }
 		if(this.options.host && typeof this.options.host !== "string") { throw new Error(ErrorMessages.BAD_URL); }
@@ -54,9 +56,14 @@ class Client extends Emitter {
 			};
 			this._payload = data;
 			this._setStatus(ClientStatus.CONNECTING);
-			const options = this.options.path ? { path: this.options.path } : { host: this.options.host, port: this.options.port };
-			if(this.options.secure) {
-				options.servername = options.host;
+			const options = Object.assign({}, this.options.options);
+			if(this.options.host) {
+				options.host = options.servername = this.options.host;
+				options.port = this.options.port;
+			} else {
+				options.path = this.options.path;
+			}
+			if(this.options.tls) {
 				this.connection = tls.connect(options);
 			} else {
 				this.connection = net.connect(options);
@@ -114,7 +121,7 @@ class Client extends Emitter {
 		this._setStatus(ClientStatus.CONNECTED);
 		if(this.options.handshake) {
 			const socket = this.connection;
-			const host = this.options.host;
+			const host = this.options.host || "net-ipc";
 			const data = Buffer.from(`GET / HTTP/1.1\r\nHost: ${host}\r\nConnection: Upgrade\r\nUpgrade: net-ipc\r\n\r\n`);
 			socket.on(ConnectionEvents.DATA, () => {
 				const test = socket.read(32);

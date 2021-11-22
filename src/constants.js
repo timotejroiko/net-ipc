@@ -18,6 +18,7 @@ module.exports = {
 		BAD_PORT: "invalid TCP port",
 		BAD_PATH: "invalid socket path",
 		BAD_URL: "invalid host address",
+		BAD_OPTIONS: "invalid options object",
 		SERVER_EXISTS: "server already exists",
 		EADDRINUSE: "EADDRINUSE: address already in use",
 		ORPHAN_CONNECTION: "closing orphaned connection",
@@ -51,6 +52,7 @@ module.exports = {
 	ServerEvents: {
 		ERROR: "error",
 		CONNECTION: "connection",
+		SECURECONNECTION: "secureConnection",
 		LISTENING: "listening",
 		CLOSE: "close"
 	},

@@ -10,20 +10,33 @@ const c222 = new Client({
 	messagepack: true
 });
 
-const c3 = new Client({ url: "localhost:8333" });
+const c3 = new Client({
+	host: "localhost",
+	port: 8333
+});
 const c4 = new Client({
-	url: "localhost:8333",
+	host: "localhost",
+	port: 8333,
 	compress: true
 });
 const c44 = new Client({
-	url: "localhost:8333",
+	host: "localhost",
+	port: 8333,
 	compress: false,
 	messagepack: true
 });
 const c444 = new Client({
-	url: "localhost:8333",
+	host: "localhost",
+	port: 8333,
 	compress: true,
 	messagepack: true
+});
+
+const c5 = new Client({
+	host: "localhost",
+	port: 8334,
+	tls: true,
+	options: { pskCallback: () => ({ psk: Buffer.from("test"), identity: "test" }) }
 });
 
 console.log("clients started");
@@ -62,10 +75,14 @@ console.log("clients started");
 	await messageTest(c0444, "compressed messagepack tcp");
 	await requestTest(c0444, "compressed messagepack tcp request");
 
+	const c05 = await c5.connect("test5");
+	await messageTest(c05, "tcp with tls");
+	await requestTest(c05, "tcp with tls request");
+
 	await c01.send("finish");
 
 	process.exit();
-})();
+})().catch(console.log);
 
 async function messageTest(client, test) {
 	console.log(`[CLIENT] starting ${test} test`);

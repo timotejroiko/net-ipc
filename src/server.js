@@ -1,6 +1,7 @@
 "use strict";
 
-const { Server: NetServer } = require("net");
+const net = require("net");
+const tls = require("tls");
 const { unlinkSync, statSync } = require("fs");
 const Emitter = require("events");
 const Connection = require("./connection.js");
@@ -15,15 +16,22 @@ const {
 module.exports = class Server extends Emitter {
 	constructor(options = {}) {
 		super();
-		this.options = { ...options };
+		this.options = {
+			path: options.path,
+			port: options.port,
+			tls: Boolean(options.tls),
+			options: options.options || {},
+			max: Number(options.max) > 0 ? Number(options.max) : void 0,
+			retries: Number(options.retries) >= 0 ? Number(options.retries) : Options.DEFAULT_RETRIES
+		};
 		this.connections = [];
 		this.server = null;
 		if(!this.options.port && !this.options.path) { this.options.path = Options.DEFAULT_PATH; }
+		if(typeof this.options.options !== "object") { throw new Error(ErrorMessages.BAD_OPTIONS); }
 		if(this.options.max && !Number.isInteger(this.options.max)) { throw new Error(ErrorMessages.BAD_CONNECTIONS); }
 		if(this.options.port && !Number.isInteger(this.options.port)) { throw new Error(ErrorMessages.BAD_PORT); }
 		if(this.options.path && typeof this.options.path !== "string") { throw new Error(ErrorMessages.BAD_PATH); }
 		if(this.options.path && process.platform === "win32") { this.options.path = `\\\\.\\pipe\\${this.options.path.replace(/^\//, "").replace(/\//g, "-")}`; }
-		this.options.retries = Number(this.options.retries) >= 0 ? Number(this.options.retries) : Options.DEFAULT_RETRIES;
 	}
 	start() {
 		return new Promise((ok, nope) => {
@@ -31,10 +39,14 @@ module.exports = class Server extends Emitter {
 				nope(new Error(ErrorMessages.SERVER_EXISTS));
 				return;
 			}
-			this.server = new NetServer();
+			if(this.options.tls) {
+				this.server = tls.createServer(this.options.options);
+			} else {
+				this.server = net.createServer(this.options.options);
+			}
 			this.server.on(ServerEvents.ERROR, this._onerror.bind(this));
 			this.server.on(ServerEvents.CLOSE, this._onclose.bind(this));
-			this.server.on(ServerEvents.CONNECTION, this._onconnection.bind(this));
+			this.server.on(this.options.tls ? ServerEvents.SECURECONNECTION : ServerEvents.CONNECTION, this._onconnection.bind(this));
 			this.server.on(ServerEvents.LISTENING, this._onlistening.bind(this));
 			this.server.once(ServerEvents.LISTENING, () => ok(this));
 			if(this.options.max) { this.server.maxConnections = this.options.max; }
