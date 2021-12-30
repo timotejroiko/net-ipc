@@ -88,21 +88,6 @@ module.exports = {
 	_nonce() {
 		return Math.floor(Math.random() * Number.MAX_SAFE_INTEGER).toString(36) + Date.now().toString(36);
 	},
-	_replacer() {
-		const seen = new WeakSet();
-		return (_, value) => {
-			if(typeof value === "object" && value) {
-				if(seen.has(value)) {
-					return `[Circular ${value.constructor.name}]`;
-				}
-				seen.add(value);
-			}
-			if(typeof value === "bigint") {
-				return value.toString();
-			}
-			return value;
-		};
-	},
 	_read() {
 		const socket = this.connection;
 		while(socket.readableLength > 1) {
@@ -150,7 +135,7 @@ module.exports = {
 	},
 	_pack(data) {
 		const socket = this.connection;
-		let msg = socket.msgpack ? socket.msgpack.pack(data) : Buffer.from(JSON.stringify(data, this._replacer()));
+		let msg = socket.msgpack ? socket.msgpack.pack(data) : Buffer.from(JSON.stringify(data));
 		if(socket.zlib) { msg = socket.zlib.deflate.process(msg); }
 		const tag = this._tag(msg.length);
 		const packet = Buffer.allocUnsafe(msg.length + tag.length);
