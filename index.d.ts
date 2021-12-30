@@ -61,7 +61,7 @@ declare module "net-ipc" {
 		on(event: 'disconnect', listener: (connection: Connection, reason?: any) => void): this;
 		on(event: 'close', listener: () => void): this;
 		on(event: 'message', listener: (message: any, connection: Connection) => void): this;
-		on(event: 'request', listener: (request: any, response: (data: any) => Promise<void>) => void, connection: Connection): this;
+		on(event: 'request', listener: (request: any, response: (data: any) => Promise<void>, connection: Connection) => void): this;
 		start(): Promise<this>;
 		close(allowReconnect?: boolean): Promise<this>;
 		broadcast(data: any): Promise<void>;

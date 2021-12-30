@@ -36,7 +36,7 @@ const c5 = new Client({
 	host: "localhost",
 	port: 8334,
 	tls: true,
-	options: { pskCallback: () => ({ psk: Buffer.from("test"), identity: "test" }) }
+	options: { pskCallback: () => ({ psk: Buffer.from("test"), identity: "test" }), ciphers: "PSK", checkServerIdentity: () => void 0 }
 });
 
 console.log("clients started");

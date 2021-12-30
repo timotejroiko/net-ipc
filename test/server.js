@@ -11,7 +11,7 @@ const tcp = new Server({ port: 8333 });
 tcp.start();
 
 console.log("[TLS SERVER] starting");
-const tls = new Server({ port: 8334, tls: true, options: { pskCallback: () => Buffer.from("test") } });
+const tls = new Server({ port: 8334, tls: true, options: { pskCallback: () => Buffer.from("test"), ciphers: "PSK" } });
 tls.start();
 
 socket.on("message", message1).on("request", request1);
