@@ -70,9 +70,7 @@ module.exports = class Server extends Emitter {
 	async close(allowReconnect = false) {
 		if(this.server) {
 			this.server.close();
-			for(const client of this.connections) {
-				await client.close(ErrorMessages.SERVER_CLOSED, allowReconnect);
-			}
+			await Promise.all(this.connections.map(client => client.close(ErrorMessages.SERVER_CLOSED, allowReconnect)));
 		}
 		return this;
 	}
