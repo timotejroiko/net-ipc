@@ -83,8 +83,8 @@ module.exports = class Server extends Emitter {
 		if(!Number.isInteger(timeout)) { return Promise.reject(ErrorMessages.BAD_TIMEOUT); }
 		return Promise.allSettled(this.connections.map(c => c.request(data, timeout)));
 	}
-	ping(data) {
-		return Promise.allSettled(this.connections.map(c => c.ping(data)));
+	ping(data, timeout = Options.DEFAULT_TIMEOUT) {
+		return Promise.allSettled(this.connections.map(c => c.ping(data, timeout)));
 	}
 	pause() {
 		for(const c of this.connections) {
