@@ -1,7 +1,7 @@
 declare module "net-ipc" {
 	import { EventEmitter } from "events";
 	import { Socket as NetClient, Server as NetServer, ServerOpts, ConnectOpts } from "net";
-	import { TlsOptions, ConnectionOptions } from "tls";
+	import { Server as TLSServer, TLSSocket, TlsOptions, ConnectionOptions } from "tls";
 	export type PromiseSettled = {
 		status: "fulfilled" | "rejected";
 		value?: any;
@@ -57,7 +57,7 @@ declare module "net-ipc" {
 		id?: string;
 		status: ClientStatus;
 		options: ClientOptions;
-		connection: NetClient;
+		connection: NetClient | TLSSocket;
 	}
 	export class Server extends EventEmitter {
 		constructor(options?: ServerOptions);
@@ -72,12 +72,12 @@ declare module "net-ipc" {
 		close(allowReconnect?: boolean): Promise<this>;
 		broadcast(data: any): Promise<void>;
 		survey(data: any, timeout?: number): Promise<PromiseSettled>;
-		ping(data?: any): Promise<PromiseSettled>;
+		ping(data?: any, timeout?: number): Promise<PromiseSettled>;
 		pause(): void;
 		resume(): void;
 		connections: Connection[];
 		options: ServerOptions;
-		server: NetServer;
+		server: NetServer | TLSServer;
 	}
 	export class Connection {
 		send(data: any): Promise<void>;
@@ -89,6 +89,6 @@ declare module "net-ipc" {
 		resume(): void;
 		id: string;
 		server: Server;
-		connection: NetClient;
+		connection: NetClient | TLSSocket;
 	}
 }
