@@ -11,6 +11,7 @@ declare module "net-ipc" {
 		path?: string;
 		host?: string;
 		port?: number;
+		tls?: boolean;
 		options?: ConnectOpts | ConnectionOptions;
 		handshake?: boolean;
 		compress?: boolean;
@@ -51,7 +52,7 @@ declare module "net-ipc" {
 		connect(payload?: any): Promise<this>;
 		send(data: any): Promise<void>;
 		request(data: any, timeout?: number): Promise<any>;
-		ping(data?: any): Promise<number>;
+		ping(data?: any, timeout?: number): Promise<number>;
 		close(reason?: any): Promise<boolean>;
 		destroy(reason?: any): boolean;
 		id?: string;
@@ -82,7 +83,7 @@ declare module "net-ipc" {
 	export class Connection {
 		send(data: any): Promise<void>;
 		request(data: any, timeout?: number): Promise<any>;
-		ping(data?: any): Promise<number>;
+		ping(data?: any, timeout?: number): Promise<number>;
 		close(reason?: any, allowReconnect?: boolean): Promise<boolean>;
 		destroy(reason?: any): boolean;
 		pause(): void;

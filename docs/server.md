@@ -10,7 +10,7 @@ The `net-ipc` Server class, extends Node's [EventEmitter](https://nodejs.org/api
 const { Server } = require("net-ipc");
 
 const server = new Server({
-    port: 9999
+    port: 4466
 });
 
 server.on("message", (message, connection) => {
@@ -57,7 +57,7 @@ Emitted when an error occurs. If there is no listener, the error will be swallow
 
 |params|type|description|
 |-|-|-|
-|error|[Error](https://developer.mozilla.org/en-US/docs/web/javascript/reference/global_objects/error)|An error instance describing the problem|
+|error|error|An error instance describing the problem|
 |connection|[Connection](#connection)|The connection where the error happened|
 
 ```js
@@ -160,7 +160,7 @@ server.on("request", (request, response, connection) => {
 
 Current server options.
 
-* **type -> [Object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object)**
+* **type: object**
 
 ```js
 console.log(server.options);
@@ -170,7 +170,7 @@ console.log(server.options);
 
 An array of [Connection](#connection) instances representing currently connected clients. Connection instances also implement Client methods for independent bidirectional communication.
 
-* **type -> [Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)<[Connection](#connection)>**
+* **type: Array<[Connection](#connection)>**
 
 ```js
 for(const connection of server.connections) {
@@ -183,7 +183,7 @@ for(const connection of server.connections) {
 
 Internal instance of [net.Server](https://nodejs.org/api/net.html#class-netserver) if tls is disabled, or [tls.Server](https://nodejs.org/api/tls.html#class-tlsserver) if tls is enabled, for advanced usage.
 
-* **type -> [net.Server](https://nodejs.org/api/net.html#class-netserver) | [tls.Server](https://nodejs.org/api/tls.html#class-tlsserver)**
+* **type: [net.Server](https://nodejs.org/api/net.html#class-netserver) | [tls.Server](https://nodejs.org/api/tls.html#class-tlsserver)**
 
 ```js
 console.log(server.server);
@@ -197,7 +197,7 @@ console.log(server.server);
 
 Starts the server.
 
-* **returns -> [Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<[Server](#server)>**
+* **returns: Promise<[Server](#server)>**
 
 ```js
 server.start().then(server => {
@@ -215,7 +215,7 @@ Gracefully disconnects all clients and closes the server. If `allowReconnect` is
 |-|-|-|-|-|
 |allowReconnect|boolean|no|false|Whether the clients should try to reconnect after being disconnected|
 
-* **returns -> [Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<[Server](#server)>**
+* **returns: Promise<[Server](#server)>**
 
 ```js
 server.close(true).then(server => {
@@ -232,7 +232,7 @@ Sends a message to all clients. Transmission errors will be forwarded to the err
 |-|-|-|-|-|
 |data|any|yes|-|The data to send|
 
-* **returns -> [Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)\<void\>**
+* **returns: Promise\<void\>**
 
 ```js
 server.broadcast("hello everyone").then(() => {
@@ -249,7 +249,7 @@ Sends a request to all clients and waits for them to respond. Returns an array o
 |data|any|yes|-|The data to send|
 |timeout|number|no|10000|How long to wait for a response from each client before giving up on them, 0 to wait forever|
 
-* **returns -> [Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<[Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)<[outcome](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/allSettled#using_promise.allsettled)>>**
+* **returns: Promise<Array<[outcome](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/allSettled#using_promise.allsettled)>>**
 
 ```js
 server.survey("test").then(results => {
@@ -273,7 +273,7 @@ Sends a ping to all clients and waits for them to respond. Returns an array of [
 |data|any|no|-|Optional data to measure the latency for|
 |timeout|number|no|10000|How long to wait for a response from each client before giving up on them|
 
-* **returns -> [Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<[Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)<[outcome](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/allSettled#using_promise.allsettled)>>**
+* **returns: Promise<Array<[outcome](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/allSettled#using_promise.allsettled)>>**
 
 ```js
 server.ping("test").then(results => {
@@ -292,7 +292,7 @@ server.ping("test").then(results => {
 
 Pause receiving messages on all connections. Clients will be instructued to queue their messages.
 
-* **returns -> void**
+* **returns: void**
 
 ```js
 server.pause();
@@ -302,7 +302,7 @@ server.pause();
 
 Resume receiving messages on all connections. Queued messages will be resumed in order.
 
-* **returns -> void**
+* **returns: void**
 
 ```js
 server.resume();
@@ -333,7 +333,7 @@ server.on("connect", async (connection, payload) => {
 
 This connection's assigned ID. All connections receive automatically assigned alphanumeric IDs once the connection has been established. Clients that disconnect and reconnect will retain their existing IDs whenever possible.
 
-* **type -> [String](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String)**
+* **type: string**
 
 ```js
 console.log(connection.id);
@@ -343,7 +343,7 @@ console.log(connection.id);
 
 A reference to the parent [Server](#server) instance.
 
-* **type -> [Server](#server)**
+* **type: [Server](#server)**
 
 ```js
 console.log(connection.server);
@@ -353,7 +353,7 @@ console.log(connection.server);
 
 The connection's internal socket instance, [tls.TLSSocket](https://nodejs.org/api/tls.html#class-tlstlssocket) if tls is enabled or [net.Socket](https://nodejs.org/api/net.html#class-netsocket) otherwise.
 
-* **type -> [net.Socket](https://nodejs.org/api/net.html#class-netsocket) | [tls.TLSSocket](https://nodejs.org/api/tls.html#class-tlstlssocket)**
+* **type: [net.Socket](https://nodejs.org/api/net.html#class-netsocket) | [tls.TLSSocket](https://nodejs.org/api/tls.html#class-tlstlssocket)**
 
 ```js
 console.log(connection.connection);
@@ -371,7 +371,7 @@ Sends a message to this client.
 |-|-|-|-|-|
 |data|any|yes|-|The data to send|
 
-* **returns -> [Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)\<void\>**
+* **returns: Promise\<void\>**
 
 ```js
 connection.send("hello person!").then(() => {
@@ -388,7 +388,7 @@ Sends a request to this client and waits for their response.
 |data|any|yes|-|The data to send|
 |timeout|number|no|10000|How long to wait before rejecting, 0 to wait forever|
 
-* **returns -> [Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)\<any\>**
+* **returns: Promise\<any\>**
 
 ```js
 connection.send("hello person!").then(() => {
@@ -405,11 +405,11 @@ Sends a ping to this client and waits for them to respond. Returns the latency v
 |data|any|no|-|Optional data to measure the latency for|
 |timeout|number|no|10000|How long to wait for a response before rejecting, 0 to wait forever|
 
-* **returns -> [Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)\<number\>**
+* **returns: Promise\<number\>**
 
 ```js
 connection.ping("test").then(result => {
-    console.log(`ping for ${connection.id} -> ${result}ms`);
+    console.log(`ping for ${connection.id}: ${result}ms`);
 }).catch(console.error);
 ```
 
@@ -417,7 +417,7 @@ connection.ping("test").then(result => {
 
 Pause receiving messages on this connection. The Client will be instructued to queue its messages.
 
-* **returns -> void**
+* **returns: void**
 
 ```js
 connection.pause();
@@ -427,7 +427,7 @@ connection.pause();
 
 Resume receiving messages on this connection. Queued messages will be resumed in order.
 
-* **returns -> void**
+* **returns: void**
 
 ```js
 connection.resume();
@@ -442,7 +442,7 @@ Gracefully disconnects this client. Any pending operations will be fulfilled bef
 |reason|any|no|-|The reason for disconnecting|
 |allowReconnect|boolean|no|false|Whether the client should try to auto-reconnect after being disconnected|
 
-* **returns -> [Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)\<boolean\>**
+* **returns: Promise\<boolean\>**
 
 ```js
 connection.close("invalid password", false).then(done => {
@@ -460,7 +460,7 @@ Immediately disconnects this client. Any pending operations will be rejected. Th
 |-|-|-|-|-|
 |reason|any|no|-|The reason for disconnecting|
 
-* **returns -> boolean**
+* **returns: boolean**
 
 ```js
 connection.destroy("try again");
