@@ -11,7 +11,7 @@ const { Client } = require("net-ipc");
 
 const client = new Client({
     host: 364.24.253.23,
-    port: 9999
+    port: 4466
 });
 
 client.on("message", message => {
@@ -27,8 +27,8 @@ client.connect().then(console.log).catch(console.error);
 
 |parameter|type|required|default|description|
 |-|-|-|-|-|
-|path|string|no|"net‑ipc"|Unix domain socket path. If host and port are not provided, the client will connect using socket mode|
-|host|string|no|-|Pomain name or IP address to connect using TCP mode|
+|path|string|no|"net‑ipc"|Unix domain socket path. If a host is not provided, the client will connect using socket mode|
+|host|string|no|-|Domain name or IP address to connect using TCP mode (without http/https/etc)|
 |port|number|no|4466|Port number to use when connecting using TCP mode|
 |tls|boolean|no|false|If enabled, the client will connect in secure mode. The server must also be running in secure mode or be behind an SSL proxy|
 |handshake|boolean|no|false|If enabled, the client simulate a websocket handshake for compatibility with http/https proxies|

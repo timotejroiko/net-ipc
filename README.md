@@ -56,7 +56,7 @@ const server = new Server({
     port: 443,
     tls: true,
     options: {
-        cert: readFileSync("/path/to/certificate.pem")
+        cert: readFileSync("/path/to/certificate.pem"),
         key: readFileSync("/path/to/key.pem")
     }
 });
@@ -174,7 +174,7 @@ Request and response example:
 // server side
 server.on("request", async (req, res, client) => {
     if(req.type === "fetch") {
-        const fetched = someDatabase.fetch(req.data);
+        const fetched = await someDatabase.fetch(req.data);
         await res(fetched);
     }
 });
