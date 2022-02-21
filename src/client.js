@@ -50,6 +50,9 @@ class Client extends Emitter {
 				nope(ErrorMessages.NOT_IDLE);
 				return;
 			}
+			if(this._closed) {
+				this._closed = false;
+			}
 			this._promise = {
 				resolve: ok,
 				reject: nope
