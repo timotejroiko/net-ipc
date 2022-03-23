@@ -6,7 +6,6 @@ const interfaces = require("./interfaces.js");
 class Connection {
 	constructor(socket, server) {
 		this.server = server;
-		this.id = this._nonce();
 		this.connection = socket;
 		this.connection.on(ConnectionEvents.ERROR, this._onerror.bind(this));
 		this.connection.on(ConnectionEvents.CLOSE, this._onclose.bind(this));

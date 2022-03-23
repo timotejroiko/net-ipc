@@ -22,7 +22,8 @@ module.exports = class Server extends Emitter {
 			tls: Boolean(options.tls),
 			options: options.options || {},
 			max: Number(options.max) > 0 ? Number(options.max) : void 0,
-			retries: Number(options.retries) >= 0 ? Number(options.retries) : Options.DEFAULT_RETRIES
+			retries: Number(options.retries) >= 0 ? Number(options.retries) : Options.DEFAULT_RETRIES,
+			idGen: typeof options.generateID === "function" ? options.generateID : null
 		};
 		this.connections = [];
 		this.server = null;
@@ -113,6 +114,7 @@ module.exports = class Server extends Emitter {
 	}
 	_onconnection(socket) {
 		const client = new Connection(socket, this);
+		client.id = this.options.idGen ? this.options.idGen() : client._nonce();
 		const timer = setTimeout(() => {
 			client.close();
 		}, Options.DEFAULT_CONNECTIONTIMEOUT);
