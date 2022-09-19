@@ -21,6 +21,7 @@ module.exports = class Server extends Emitter {
 			port: options.port,
 			tls: Boolean(options.tls),
 			options: options.options || {},
+			listener: options.listenOptions || {},
 			max: Number(options.max) > 0 ? Number(options.max) : void 0,
 			retries: Number(options.retries) >= 0 ? Number(options.retries) : Options.DEFAULT_RETRIES,
 			idGen: typeof options.generateID === "function" ? options.generateID : null
@@ -59,11 +60,15 @@ module.exports = class Server extends Emitter {
 					nope(new Error(`${ErrorMessages.EADDRINUSE} - ${this.options.path}`));
 					return;
 				} catch(e) { /* no-op */ }
-				this.server.listen({ path: this.options.path });
+				this.server.listen({
+					...this.options.listener,
+					port: void 0,
+					path: this.options.path
+				});
 			} else if(this.options.port) {
 				this.server.listen({
-					port: this.options.port,
-					exclusive: true
+					...this.options.listener,
+					port: this.options.port
 				});
 			}
 		});

@@ -30,6 +30,7 @@ server.start().then(console.log).catch(console.error);
 |port|number|no|-|TCP port to bind the server to. If provided, the server will operate in TCP mode, otherwise it will fallback to socket mode|
 |tls|boolean|no|false|If enabled, the server will operate in secure mode. An SSL certificate or PSK configuration will be required in the `options` field|
 |options|object|no|{}|[TLSServer](https://nodejs.org/api/tls.html#tlscreateserveroptions-secureconnectionlistener) options if tls is enabled, [netServer](https://nodejs.org/api/net.html#netcreateserveroptions-connectionlistener) options otherwise|
+|listenOptions|object|no|{}|[listenOptions](https://nodejs.org/api/net.html#serverlistenoptions-callback) for advanced listener configuration such as binding to a different IP address|
 |max|number|no|-|Maximum number of concurrent clients the server will accept, unlimited otherwise|
 |retries|number|no|3|Maximum number of retries on connection failure before rejecting an operation|
 
