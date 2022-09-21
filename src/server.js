@@ -60,9 +60,9 @@ module.exports = class Server extends Emitter {
 					nope(new Error(`${ErrorMessages.EADDRINUSE} - ${this.options.path}`));
 					return;
 				} catch(e) { /* no-op */ }
+				delete this.options.listener.port;
 				this.server.listen({
 					...this.options.listener,
-					port: void 0,
 					path: this.options.path
 				});
 			} else if(this.options.port) {
