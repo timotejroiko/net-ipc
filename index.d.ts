@@ -38,7 +38,7 @@ declare module "net-ipc" {
 		port?: number;
 		tls?: boolean;
 		options?: ServerOpts | TlsOptions;
-		listenOptions?: ListenOptions;
+		listenOptions?: Omit<ListenOptions, "port" | "path">;
 		max?: number;
 		retries?: number;
 	}

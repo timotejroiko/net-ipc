@@ -152,6 +152,7 @@ class Client extends Emitter {
 			});
 			socket.write(data);
 		} else {
+			this.connection.write(Buffer.from("IPC"));
 			this._init();
 		}
 	}

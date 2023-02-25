@@ -26,7 +26,8 @@ class Connection {
 		const socket = this.connection;
 		const test = socket.read(3);
 		if(!test) { return; }
-		if(test.toString() === "GET") {
+		const string = test.toString();
+		if(string === "GET") {
 			const CRLF = Buffer.from("\r\n\r\n");
 			let head = socket._readableState.buffer.head;
 			let buff = Buffer.allocUnsafe(0);
@@ -47,10 +48,12 @@ class Connection {
 					}
 				}
 			} while((head = head.next));
-		} else {
-			socket.unshift(test);
+		} else if(string === "IPC") {
 			socket._events[ConnectionEvents.DATA] = this._read.bind(this);
 			this._read();
+		} else {
+			this.connection.emit(ConnectionEvents.ERROR, new Error(ErrorMessages.INVALID_INIT_TAG));
+			this.destroy();
 		}
 	}
 	_onerror(e) {

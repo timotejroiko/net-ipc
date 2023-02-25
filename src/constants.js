@@ -14,6 +14,7 @@ module.exports = {
 		BAD_TIMEOUT: "invalid timeout",
 		TIMEOUT: "request timed out",
 		PREMATURE_PACKET: "ignored data packet received before connection finished establishing",
+		INVALID_INIT_TAG: "received invalid init tag",
 		BAD_CONNECTIONS: "invalid max number of connections",
 		BAD_PORT: "invalid TCP port",
 		BAD_PATH: "invalid socket path",
