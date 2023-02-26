@@ -52,8 +52,7 @@ class Connection {
 			socket._events[ConnectionEvents.DATA] = this._read.bind(this);
 			this._read();
 		} else {
-			this.connection.emit(ConnectionEvents.ERROR, new Error(ErrorMessages.INVALID_INIT_TAG));
-			this.destroy();
+			socket.end("HTTP/1.1 418 I'm a Teapot");
 		}
 	}
 	_onerror(e) {
