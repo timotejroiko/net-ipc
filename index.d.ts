@@ -73,8 +73,8 @@ declare module "net-ipc" {
 		start(): Promise<this>;
 		close(allowReconnect?: boolean): Promise<this>;
 		broadcast(data: any): Promise<void>;
-		survey(data: any, timeout?: number): Promise<PromiseSettled>;
-		ping(data?: any, timeout?: number): Promise<PromiseSettled>;
+		survey(data: any, timeout?: number): Promise<Array<PromiseSettled>>;
+		ping(data?: any, timeout?: number): Promise<Array<PromiseSettled>>;
 		pause(): void;
 		resume(): void;
 		connections: Connection[];
