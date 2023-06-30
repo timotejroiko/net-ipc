@@ -94,7 +94,7 @@ Connecting to a local IPC server.
 ```js
 const { Client } = require("net-ipc");
 const client = new Client({
-    path: "/myapp";
+    path: "/myapp"
 });
 
 client.connect().catch(console.error);

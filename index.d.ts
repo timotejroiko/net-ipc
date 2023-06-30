@@ -25,7 +25,7 @@ declare module "net-ipc" {
 		compress: boolean,
 		messagepack: boolean
 	}
-	export enum ClientStatus {
+	export const enum ClientStatus {
 		IDLE,
 		CONNECTING,
 		CONNECTED,
