@@ -29,10 +29,17 @@ class Connection {
 		const string = test.toString();
 		if(string === "GET") {
 			const CRLF = Buffer.from("\r\n\r\n");
-			let head = socket._readableState.buffer.head;
 			let buff = Buffer.allocUnsafe(0);
+
+			// Compatibility between node < 20.11 and node >= 20.11
+			const readable = socket._readableState
+			let currentBufferIndex = readable.bufferIndex
+			let currentBuffer = readable.buffer.head || readable.buffer[currentBufferIndex];
+
 			do {
-				buff = Buffer.concat([buff, head.data]);
+				const data = currentBuffer.data || currentBuffer
+
+				buff = Buffer.concat([buff, data]);
 				const index = buff.indexOf(CRLF);
 				if(index > -1) {
 					const headers = socket.read(index + 4);
@@ -47,7 +54,7 @@ class Connection {
 						socket.end("HTTP/1.1 418 I'm a Teapot");
 					}
 				}
-			} while((head = head.next));
+			} while(currentBuffer = (currentBuffer.next || readable.buffer[++currentBufferIndex]));
 		} else if(string === "IPC") {
 			socket._events[ConnectionEvents.DATA] = this._read.bind(this);
 			this._read();
