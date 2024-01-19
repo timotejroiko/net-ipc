@@ -131,10 +131,17 @@ class Client extends Emitter {
 				if(!test) { return; }
 				if(test.toString() === "HTTP/1.1 101 Switching Protocols") {
 					const CRLF = Buffer.from("\r\n\r\n");
-					let head = socket._readableState.buffer.head;
 					let buff = Buffer.allocUnsafe(0);
+
+					// Compatibility between node < 20.11 and node >= 20.11
+					const readable = socket._readableState
+					let currentBufferIndex = readable.bufferIndex
+					let currentBuffer = readable.buffer.head || readable.buffer[currentBufferIndex];
+
 					do {
-						buff = Buffer.concat([buff, head.data]);
+						const data = currentBuffer.data || currentBuffer
+
+						buff = Buffer.concat([buff, data]);
 						const index = buff.indexOf(CRLF);
 						if(index > -1) {
 							const headers = socket.read(index + 4);
@@ -143,7 +150,7 @@ class Client extends Emitter {
 							this._init();
 							return;
 						}
-					} while((head = head.next));
+					} while(currentBuffer = (currentBuffer.next || readable.buffer[++currentBufferIndex]));
 				} else {
 					const str = test.toString();
 					this._error = str.slice(0, str.indexOf("\r\n"));

@@ -154,12 +154,19 @@ module.exports = {
 		return tag.reverse();
 	},
 	_untag() {
-		let head = this.connection._readableState.buffer.head;
 		let num = 0;
 		let size = 0;
+
+		// Compatibility between node < 20.11 and node >= 20.11
+		const readable = this.connection._readableState
+		let currentBufferIndex = readable.bufferIndex
+		let currentBuffer = readable.buffer.head || readable.buffer[currentBufferIndex];
+
 		do {
-			for(let i = 0; i < head.data.length; i++) {
-				const byte = head.data[i];
+			const data = currentBuffer.data || currentBuffer
+
+			for(let i = 0; i < data.length; i++) {
+				const byte = data[i];
 				num *= 128;
 				size++;
 				if(byte > 127) {
@@ -167,7 +174,7 @@ module.exports = {
 				}
 				num += byte;
 			}
-		} while((head = head.next));
+		} while(currentBuffer = (currentBuffer.next || readable.buffer[++currentBufferIndex]));
 		return false;
 	},
 	_drain() {
