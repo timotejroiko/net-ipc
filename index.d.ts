@@ -1,7 +1,7 @@
 declare module "net-ipc" {
-	import { EventEmitter } from "events";
-	import { Socket as NetClient, Server as NetServer, ServerOpts, ConnectOpts, ListenOptions } from "net";
-	import { Server as TLSServer, TLSSocket, TlsOptions, ConnectionOptions } from "tls";
+	import type { EventEmitter } from "events";
+	import type { Socket as NetClient, Server as NetServer, ServerOpts, NetConnectOpts, ListenOptions } from "net";
+	import type { Server as TLSServer, TLSSocket, TlsOptions, ConnectionOptions } from "tls";
 	export type PromiseSettled = {
 		status: "fulfilled" | "rejected";
 		value?: any;
@@ -12,7 +12,7 @@ declare module "net-ipc" {
 		host?: string;
 		port?: number;
 		tls?: boolean;
-		options?: ConnectOpts | ConnectionOptions;
+		options?: NetConnectOpts | ConnectionOptions;
 		handshake?: boolean;
 		compress?: boolean;
 		messagepack?: boolean;
