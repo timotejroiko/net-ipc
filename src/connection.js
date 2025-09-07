@@ -56,7 +56,8 @@ class Connection {
 				}
 			} while(currentBuffer = (currentBuffer.next || readable.buffer[++currentBufferIndex]));
 		} else if(string === "IPC") {
-			socket._events[ConnectionEvents.DATA] = this._read.bind(this);
+			this.connection.removeAllListeners(ConnectionEvents.DATA);
+			this.connection.on(ConnectionEvents.DATA, this._read.bind(this));
 			this._read();
 		} else {
 			socket.end("HTTP/1.1 418 I'm a Teapot");
